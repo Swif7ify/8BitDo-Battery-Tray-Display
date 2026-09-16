@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eightbitdo-battery-tray"
+version = "0.2.0"
+description = "Read-only Windows tray battery monitor for the 8BitDo Ultimate 2 Wireless controller."
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [{name = "OneDev PH"}]
+dependencies = [
+  "Pillow>=11.0,<13",
+  "pystray>=0.19.5,<1",
+  "winrt-Windows.Devices.Power==3.2.1; platform_system == 'Windows'",
+  "winrt-Windows.Foundation==3.2.1; platform_system == 'Windows'",
+  "winrt-Windows.Gaming.Input==3.2.1; platform_system == 'Windows'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<10",
+  "ruff>=0.9,<1",
+  "pyinstaller>=6.12,<7",
+]
+
+[project.scripts]
+eightbitdo-battery-tray = "eightbitdo_battery_tray.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
