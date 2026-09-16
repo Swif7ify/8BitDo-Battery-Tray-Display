@@ -83,6 +83,13 @@ class TrayApplication:
             icon_label = "--"
             title = f"{APP_NAME} — controller disconnected"
 
+        LOGGER.info(
+            "Controller update: connected=%s, percentage=%s, charging=%s",
+            snapshot.connected,
+            snapshot.percentage,
+            snapshot.charging,
+        )
+
         try:
             self._icon.icon = make_icon(icon_label, charging=is_charging)
             self._icon.title = title[:127]

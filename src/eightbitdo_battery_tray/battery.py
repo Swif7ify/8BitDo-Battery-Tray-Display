@@ -165,7 +165,7 @@ class WindowsGamingInputBatteryProvider:
                     return True
                 if status_int in (1, 2):  # Discharging, Idle
                     return False
-        except (AttributeError, RuntimeError, OSError, ValueError, TypeError):
+        except (AttributeError, RuntimeError, OSError, ValueError, TypeError, ModuleNotFoundError):
             pass
         return None
 
@@ -173,7 +173,7 @@ class WindowsGamingInputBatteryProvider:
     def _safe_attr(obj: Any, name: str) -> str | None:
         try:
             value = getattr(obj, name)
-        except (AttributeError, RuntimeError, OSError):
+        except (AttributeError, RuntimeError, OSError, ModuleNotFoundError):
             return None
         return str(value) if value is not None else None
 
@@ -182,6 +182,6 @@ class WindowsGamingInputBatteryProvider:
         try:
             value = getattr(obj, name)
             return None if value is None else int(value)
-        except (AttributeError, RuntimeError, OSError, ValueError, TypeError):
+        except (AttributeError, RuntimeError, OSError, ValueError, TypeError, ModuleNotFoundError):
             # WinRT property access may fail transiently on disconnect/reconnect.
             return None

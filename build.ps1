@@ -36,6 +36,7 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
     --collect-submodules "winrt.windows.devices.power" `
     --collect-submodules "winrt.windows.foundation" `
     --collect-submodules "winrt.windows.foundation.collections" `
+    --collect-submodules "winrt.windows.system.power" `
     "$PSScriptRoot\tray_launcher.py"
 
 Write-Host "Built: $PSScriptRoot\dist\8BitDoBatteryTray.exe"

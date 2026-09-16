@@ -17,6 +17,7 @@ dependencies = [
   "winrt-Windows.Foundation==3.2.1; platform_system == 'Windows'",
   "winrt-Windows.Foundation.Collections==3.2.1; platform_system == 'Windows'",
   "winrt-Windows.Gaming.Input==3.2.1; platform_system == 'Windows'",
+  "winrt-Windows.System.Power==3.2.1; platform_system == 'Windows'",
 ]
 
 [project.optional-dependencies]

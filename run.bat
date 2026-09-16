@@ -47,7 +47,7 @@ if not exist "%VENV_PY%" (
     if errorlevel 1 goto :setup_error
 )
 
-"%VENV_PY%" -c "import eightbitdo_battery_tray, pystray, PIL; from winrt.windows.gaming.input import RawGameController; from winrt.windows.foundation.collections import IVectorView" >nul 2>&1
+"%VENV_PY%" -c "import eightbitdo_battery_tray, pystray, PIL; from winrt.windows.gaming.input import RawGameController; from winrt.windows.foundation.collections import IVectorView; from winrt.windows.system.power import BatteryStatus" >nul 2>&1
 if errorlevel 1 (
     echo Installing/updating required packages...
     "%VENV_PY%" -m pip install --disable-pip-version-check -e .
