@@ -7,6 +7,7 @@ from dataclasses import dataclass
 class BatterySnapshot:
     connected: bool
     percentage: int | None
+    charging: bool | None = None
     device_name: str | None = None
     vendor_id: int | None = None
     product_id: int | None = None

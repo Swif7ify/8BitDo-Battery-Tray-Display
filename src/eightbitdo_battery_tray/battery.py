@@ -60,11 +60,12 @@ class WindowsGamingInputBatteryProvider:
 
         try:
             report = target.try_get_battery_report()
-        except Exception as exc:  # WinRT can fail transiently during disconnect/reconnect.
+        except (OSError, RuntimeError, AttributeError) as exc:  # WinRT can fail transiently
             LOGGER.warning("Windows battery query failed: %s", type(exc).__name__)
             return BatterySnapshot(
                 connected=True,
                 percentage=None,
+                charging=None,
                 device_name=name,
                 vendor_id=vid,
                 product_id=pid,
@@ -75,6 +76,7 @@ class WindowsGamingInputBatteryProvider:
             return BatterySnapshot(
                 connected=True,
                 percentage=None,
+                charging=None,
                 device_name=name,
                 vendor_id=vid,
                 product_id=pid,
@@ -84,11 +86,13 @@ class WindowsGamingInputBatteryProvider:
         remaining = self._safe_int_attr(report, "remaining_capacity_in_milliwatt_hours")
         full = self._safe_int_attr(report, "full_charge_capacity_in_milliwatt_hours")
         percentage = calculate_percentage(remaining, full)
+        charging = self._is_charging(report)
 
         if percentage is None:
             return BatterySnapshot(
                 connected=True,
                 percentage=None,
+                charging=charging,
                 device_name=name,
                 vendor_id=vid,
                 product_id=pid,
@@ -101,6 +105,7 @@ class WindowsGamingInputBatteryProvider:
         return BatterySnapshot(
             connected=True,
             percentage=percentage,
+            charging=charging,
             device_name=name,
             vendor_id=vid,
             product_id=pid,
@@ -116,7 +121,7 @@ class WindowsGamingInputBatteryProvider:
         for attempt in range(attempts):
             try:
                 last = list(self._raw_game_controller.raw_game_controllers)
-            except Exception as exc:
+            except (OSError, RuntimeError, AttributeError) as exc:
                 LOGGER.warning("Controller enumeration failed: %s", type(exc).__name__)
                 return []
 
@@ -131,8 +136,9 @@ class WindowsGamingInputBatteryProvider:
             try:
                 vid = int(controller.hardware_vendor_id)
                 pid = int(controller.hardware_product_id)
-            except Exception:
+            except (OSError, RuntimeError, AttributeError, ValueError) as exc:
                 # Device can disappear between enumeration and property access.
+                LOGGER.debug("Target property access skipped: %s", exc)
                 continue
 
             if vid == TARGET_VID and pid in TARGET_PIDS:
@@ -140,10 +146,34 @@ class WindowsGamingInputBatteryProvider:
         return None
 
     @staticmethod
+    def _is_charging(report: Any) -> bool | None:
+        """Detect charging state from charge rate or status property."""
+        rate = WindowsGamingInputBatteryProvider._safe_int_attr(
+            report, "charge_rate_in_milliwatts"
+        )
+        if rate is not None:
+            if rate > 0:
+                return True
+            if rate < 0:
+                return False
+
+        try:
+            status = getattr(report, "status", None)
+            if status is not None:
+                status_int = int(status)
+                if status_int == 3:  # BatteryStatus.Charging
+                    return True
+                if status_int in (1, 2):  # Discharging, Idle
+                    return False
+        except (AttributeError, RuntimeError, OSError, ValueError, TypeError):
+            pass
+        return None
+
+    @staticmethod
     def _safe_attr(obj: Any, name: str) -> str | None:
         try:
             value = getattr(obj, name)
-        except Exception:
+        except (AttributeError, RuntimeError, OSError):
             return None
         return str(value) if value is not None else None
 
@@ -152,6 +182,6 @@ class WindowsGamingInputBatteryProvider:
         try:
             value = getattr(obj, name)
             return None if value is None else int(value)
-        except Exception:
+        except (AttributeError, RuntimeError, OSError, ValueError, TypeError):
             # WinRT property access may fail transiently on disconnect/reconnect.
             return None

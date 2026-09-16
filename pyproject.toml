@@ -15,6 +15,7 @@ dependencies = [
   "pystray>=0.19.5,<1",
   "winrt-Windows.Devices.Power==3.2.1; platform_system == 'Windows'",
   "winrt-Windows.Foundation==3.2.1; platform_system == 'Windows'",
+  "winrt-Windows.Foundation.Collections==3.2.1; platform_system == 'Windows'",
   "winrt-Windows.Gaming.Input==3.2.1; platform_system == 'Windows'",
 ]
 
@@ -34,6 +35,10 @@ where = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "BLE", "PYI", "S"]
+ignore = ["S101"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

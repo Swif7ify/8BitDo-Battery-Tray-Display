@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import ctypes
 from ctypes import wintypes
+from typing import Self
 
+ERROR_ACCESS_DENIED = 5
 ERROR_ALREADY_EXISTS = 183
 MUTEX_NAME = r"Local\EightBitDoUltimate2BatteryTray_v1"
 
@@ -21,10 +23,17 @@ class SingleInstance:
 
         self._kernel32 = kernel32
         self._handle = kernel32.CreateMutexW(None, True, name)
-        if not self._handle:
-            raise ctypes.WinError(ctypes.get_last_error())
+        last_error = ctypes.get_last_error()
 
-        self.already_running = ctypes.get_last_error() == ERROR_ALREADY_EXISTS
+        if not self._handle:
+            if last_error == ERROR_ACCESS_DENIED:
+                # Mutex already exists under another privilege level in the same session.
+                self.already_running = True
+                self._owns_mutex = False
+                return
+            raise ctypes.WinError(last_error)
+
+        self.already_running = last_error == ERROR_ALREADY_EXISTS
         self._owns_mutex = not self.already_running
 
         if self.already_running:
@@ -41,8 +50,11 @@ class SingleInstance:
         self._kernel32.CloseHandle(handle)
         self._handle = None
 
-    def __enter__(self) -> "SingleInstance":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.close()
+
+    def __del__(self) -> None:
         self.close()

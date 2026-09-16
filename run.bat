@@ -15,7 +15,7 @@ if not exist "%VENV_PY%" (
 
     where py >nul 2>&1
     if not errorlevel 1 (
-        for %%V in (3.13 3.12 3.11) do (
+        for %%V in (3.15 3.14 3.13 3.12 3.11) do (
             if not defined PYTHON_CMD (
                 py -%%V -c "import sys; raise SystemExit(0 if sys.version_info >= (3,11) else 1)" >nul 2>&1
                 if !errorlevel! equ 0 (
@@ -47,7 +47,7 @@ if not exist "%VENV_PY%" (
     if errorlevel 1 goto :setup_error
 )
 
-"%VENV_PY%" -c "import eightbitdo_battery_tray, pystray, PIL; from winrt.windows.gaming.input import RawGameController" >nul 2>&1
+"%VENV_PY%" -c "import eightbitdo_battery_tray, pystray, PIL; from winrt.windows.gaming.input import RawGameController; from winrt.windows.foundation.collections import IVectorView" >nul 2>&1
 if errorlevel 1 (
     echo Installing/updating required packages...
     "%VENV_PY%" -m pip install --disable-pip-version-check -e .

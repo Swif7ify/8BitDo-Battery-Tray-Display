@@ -21,6 +21,7 @@ class TrayApplication:
     def __init__(self, log_path: Path) -> None:
         self._log_path = log_path
         self._state_lock = threading.Lock()
+        self._is_stopping = False
         self._snapshot = BatterySnapshot(connected=False, percentage=None)
         self._icon = pystray.Icon(
             name="8BitDoUltimate2Battery",
@@ -45,6 +46,8 @@ class TrayApplication:
         try:
             self._icon.run(setup=self._on_tray_ready)
         finally:
+            with self._state_lock:
+                self._is_stopping = True
             self._monitor.stop()
             self._monitor.join()
 
@@ -57,31 +60,35 @@ class TrayApplication:
                 "Running in the system tray. Right-click the icon for Refresh, Open log, or Exit.",
                 APP_NAME,
             )
-        except Exception:
+        except (OSError, RuntimeError) as exc:
             # Notifications are optional and may be disabled by Windows/Focus Assist.
-            LOGGER.debug("Startup tray notification unavailable", exc_info=True)
+            LOGGER.debug("Startup tray notification unavailable: %s", exc)
 
     def _apply_snapshot(self, snapshot: BatterySnapshot) -> None:
         with self._state_lock:
+            if self._is_stopping:
+                return
             self._snapshot = snapshot
 
+        is_charging = bool(snapshot.charging)
         if snapshot.percentage is not None:
             icon_label = str(snapshot.percentage)
-            title = f"{APP_NAME} — {snapshot.percentage}%"
+            charge_str = " (Charging)" if is_charging else ""
+            title = f"{APP_NAME} — {snapshot.percentage}%{charge_str}"
         elif snapshot.connected:
             icon_label = "--"
-            title = f"{APP_NAME} — percentage unavailable"
+            charge_str = " (Charging)" if is_charging else ""
+            title = f"{APP_NAME} — percentage unavailable{charge_str}"
         else:
             icon_label = "--"
             title = f"{APP_NAME} — controller disconnected"
 
-        self._icon.icon = make_icon(icon_label)
-        self._icon.title = title[:127]
-        # Rebuild menu state on backends that cache menu properties.
         try:
+            self._icon.icon = make_icon(icon_label, charging=is_charging)
+            self._icon.title = title[:127]
             self._icon.update_menu()
-        except Exception:
-            LOGGER.debug("Tray menu refresh unavailable", exc_info=True)
+        except (OSError, RuntimeError) as exc:
+            LOGGER.debug("Tray icon update skipped: %s", exc)
 
     def _on_refresh(self, icon: pystray.Icon, item: MenuItem) -> None:
         del icon, item
@@ -92,12 +99,14 @@ class TrayApplication:
         try:
             # os.startfile delegates to Windows' normal file association and does
             # not create a shell command string.
-            os.startfile(self._log_path)  # type: ignore[attr-defined]
+            os.startfile(self._log_path)  # noqa: S606  # type: ignore[attr-defined]
         except OSError:
             LOGGER.exception("Unable to open log file")
 
     def _on_exit(self, icon: pystray.Icon, item: MenuItem) -> None:
         del item
+        with self._state_lock:
+            self._is_stopping = True
         self._monitor.stop()
         icon.stop()
 
