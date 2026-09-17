@@ -122,31 +122,35 @@ def _draw_enlarged_battery(
     color: tuple[int, int, int, int],
     percentage: int | None = None,
 ) -> None:
-    """Draw the battery shell maximized across the canvas."""
-    body = (1, 2, 56, 61)
-    terminal = (57, 18, 63, 45)
-    shell_color = (245, 248, 255, 255)
+    """Draw the battery shell in a wide landscape format across the canvas."""
+    body = (1, 16, 55, 48)
+    terminal = (56, 24, 62, 40)
+    shell_color = (
+        color
+        if (level == BatteryLevel.EMPTY and percentage is None)
+        else (245, 248, 255, 255)
+    )
 
     # Dark drop outline for crisp contrast on light/dark taskbars
     offsets = ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1))
     for dx, dy in offsets:
         draw.rounded_rectangle(
             (body[0] + dx, body[1] + dy, body[2] + dx, body[3] + dy),
-            radius=8,
+            radius=6,
             outline=(10, 10, 15, 240),
             width=4,
         )
         draw.rounded_rectangle(
             (terminal[0] + dx, terminal[1] + dy, terminal[2] + dx, terminal[3] + dy),
-            radius=3,
+            radius=2,
             fill=(10, 10, 15, 240),
         )
 
     # Battery shell
-    draw.rounded_rectangle(body, radius=8, outline=shell_color, width=3)
-    draw.rounded_rectangle(terminal, radius=3, fill=shell_color)
+    draw.rounded_rectangle(body, radius=6, outline=shell_color, width=3)
+    draw.rounded_rectangle(terminal, radius=2, fill=shell_color)
 
-    # If exact percentage is requested, draw maximum-size bold number inside
+    # If exact percentage is requested, draw bold number inside
     if percentage is not None:
         label = str(percentage)
         font = _font_for(label)
@@ -154,68 +158,70 @@ def _draw_enlarged_battery(
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
         x = 28 - (w / 2) - bbox[0]
-        y = 31 - (h / 2) - bbox[1]
+        y = 32 - (h / 2) - bbox[1]
 
         # Dark halo under text for maximum legibility
-        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1)):
-            draw.text((x + dx, y + dy), label, font=font, fill=(10, 10, 15, 230))
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            draw.text((x + dx, y + dy), label, font=font, fill=(10, 10, 15, 240))
         draw.text((x, y), label, font=font, fill=color)
         return
 
-    # Otherwise draw 3 maximized vertical capacity blocks
+    # Otherwise draw 3 horizontal capacity blocks
     segments = _LEVEL_SEGMENTS[level]
 
     if level is BatteryLevel.UNKNOWN:
-        font = _cached_font(32)
+        font = _cached_font(24)
         bbox = draw.textbbox((0, 0), "?", font=font)
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
         x = 28 - (w / 2) - bbox[0]
-        y = 31 - (h / 2) - bbox[1]
+        y = 32 - (h / 2) - bbox[1]
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            draw.text((x + dx, y + dy), "?", font=font, fill=(10, 10, 15, 240))
         draw.text((x, y), "?", font=font, fill=color)
         return
 
     segment_boxes = (
-        (8, 9, 20, 54),
-        (24, 9, 36, 54),
-        (40, 9, 52, 54),
+        (8, 22, 20, 42),
+        (23, 22, 35, 42),
+        (38, 22, 50, 42),
     )
 
     inactive = (50, 55, 65, 180)
 
     for index, box in enumerate(segment_boxes):
         fill = color if index < segments else inactive
-        draw.rounded_rectangle(box, radius=4, fill=fill)
+        draw.rounded_rectangle(box, radius=3, fill=fill)
 
 
 def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
-    """Overlay a giant lightning symbol."""
+    """Overlay an electric lightning symbol centered over the wide battery."""
     bolt = (
-        (32, 6),
-        (22, 29),
-        (29, 29),
-        (24, 56),
-        (42, 24),
-        (35, 24),
+        (32, 10),
+        (23, 30),
+        (29, 30),
+        (25, 54),
+        (39, 27),
+        (33, 27),
     )
-    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-        draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 220))
+    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1)):
+        draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 230))
     draw.polygon(bolt, fill=(255, 255, 255, 255))
 
 
 def _draw_disconnected(draw: ImageDraw.ImageDraw) -> None:
-    """Draw a neutral disconnected battery with large diagonal cross."""
-    body = (1, 2, 56, 61)
-    terminal = (57, 18, 63, 45)
-    draw.rounded_rectangle(body, radius=8, outline=(120, 125, 135, 200), width=3)
-    draw.rounded_rectangle(terminal, radius=3, fill=(120, 125, 135, 200))
-    draw.line((10, 10, 48, 53), fill=(140, 145, 155, 255), width=5)
-    draw.line((48, 10, 10, 53), fill=(140, 145, 155, 255), width=5)
+    """Draw a neutral disconnected wide battery with diagonal cross."""
+    body = (1, 16, 55, 48)
+    terminal = (56, 24, 62, 40)
+    draw.rounded_rectangle(body, radius=6, outline=(120, 125, 135, 200), width=3)
+    draw.rounded_rectangle(terminal, radius=2, fill=(120, 125, 135, 200))
+    draw.line((14, 21, 42, 43), fill=(140, 145, 155, 255), width=4)
+    draw.line((42, 21, 14, 43), fill=(140, 145, 155, 255), width=4)
 
 
 def _font_for(label: str) -> ImageFont.ImageFont:
-    # Size 29 for 3 digits (100), size 42 for 1-2 digits (88)
-    size = 29 if len(label) >= 3 else 42
+    # Size 20 for 3 digits (100), size 26 for 1-2 digits (88)
+    size = 20 if len(label) >= 3 else 26
     return _cached_font(size)
 
 

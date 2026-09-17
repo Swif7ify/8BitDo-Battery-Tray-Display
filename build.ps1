@@ -25,12 +25,29 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
 }
 
 & .\.venv\Scripts\python.exe -m pip install --disable-pip-version-check -e ".[dev]"
+
+# Ensure logo.ico exists from logo.png for executable embedding
+if (Test-Path "$PSScriptRoot\logo.png") {
+    & .\.venv\Scripts\python.exe -c "
+from PIL import Image
+img = Image.open('logo.png')
+img.save('logo.ico', format='ICO', sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+"
+    Copy-Item "$PSScriptRoot\logo.png", "$PSScriptRoot\logo.ico" "$PSScriptRoot\src\eightbitdo_battery_tray\assets\" -Force
+}
+
+$iconArg = @()
+if (Test-Path "$PSScriptRoot\logo.ico") {
+    $iconArg = @("--icon", "$PSScriptRoot\logo.ico")
+}
+
 & .\.venv\Scripts\pyinstaller.exe `
     --noconfirm `
     --clean `
     --onefile `
     --windowed `
     --name "8BitDoBatteryTray" `
+    @iconArg `
     --paths "$PSScriptRoot\src" `
     --add-data "$PSScriptRoot\src\eightbitdo_battery_tray\assets;eightbitdo_battery_tray/assets" `
     --collect-submodules "winrt.windows.gaming.input" `
