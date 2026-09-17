@@ -46,12 +46,13 @@ def make_icon(
     *,
     connected: bool = True,
     charging: bool = False,
-    show_number: bool | None = None,
+    show_number: bool = False,
 ) -> Image.Image:
-    """Create a maximum-size, transparent Windows tray icon.
+    """Create a Windows-style battery bar tray icon.
 
-    Displays either an enlarged numeric percentage (Bluetooth LE dual mode)
-    or maximum-size vertical capacity blocks (2.4 GHz coarse mode).
+    Displays a smooth horizontal capacity bar (similar to Windows native battery),
+    color-coded to level (Green, Amber, Orange, Red) or Cyan when charging.
+    If show_number is True, displays numeric text inside the battery instead.
     """
     pct: int | None = None
     bat_level: BatteryLevel = BatteryLevel.FULL
@@ -59,32 +60,24 @@ def make_icon(
     if isinstance(level, int):
         pct = max(0, min(100, level))
         bat_level = percentage_to_level(pct)
-        if show_number is None:
-            show_number = True
     elif isinstance(level, str):
         if level == "--":
             connected = False
             bat_level = BatteryLevel.UNKNOWN
-            show_number = False
         else:
             try:
                 pct = int(level.rstrip("%"))
                 bat_level = percentage_to_level(pct)
-                if show_number is None:
-                    show_number = True
             except ValueError:
                 bat_level = (
                     BatteryLevel(level)
                     if level in BatteryLevel._value2member_map_
                     else BatteryLevel.UNKNOWN
                 )
-                show_number = False
     elif isinstance(level, BatteryLevel):
         bat_level = level
-        show_number = False
     elif level is None:
         bat_level = BatteryLevel.UNKNOWN if connected else BatteryLevel.EMPTY
-        show_number = False
 
     # Fully transparent canvas
     image = Image.new("RGBA", (ICON_SIZE, ICON_SIZE), (0, 0, 0, 0))
@@ -107,7 +100,8 @@ def make_icon(
         draw=draw,
         level=bat_level,
         color=color,
-        percentage=pct if show_number else None,
+        percentage=pct,
+        show_number=show_number,
     )
 
     if charging:
@@ -121,8 +115,9 @@ def _draw_enlarged_battery(
     level: BatteryLevel,
     color: tuple[int, int, int, int],
     percentage: int | None = None,
+    show_number: bool = False,
 ) -> None:
-    """Draw the battery shell wider in width, preserving height, across canvas."""
+    """Draw the battery shell and Windows-style fill bar across the canvas."""
     body = (1, 32, 238, 224)
     terminal = (238, 86, 255, 170)
     rad = 34
@@ -156,10 +151,10 @@ def _draw_enlarged_battery(
     draw.rounded_rectangle(body, radius=rad, outline=shell_color, width=stroke)
     draw.rounded_rectangle(terminal, radius=12, fill=shell_color)
 
-    # If exact percentage is requested, draw bold thick number inside
-    if percentage is not None:
-        label = str(percentage)
-        font = _font_for(label)
+    # If exact numeric percentage is explicitly requested
+    if show_number:
+        label = str(percentage) if percentage is not None else "?"
+        font = _font_for(label) if label != "?" else _cached_font(110)
         bbox = draw.textbbox((0, 0), label, font=font)
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
@@ -168,7 +163,6 @@ def _draw_enlarged_battery(
         x = cx - (w / 2) - bbox[0]
         y = cy - (h / 2) - bbox[1]
 
-        # Crisp stroke outline for maximum visibility without eating into glyph
         draw.text(
             (x, y),
             label,
@@ -179,10 +173,20 @@ def _draw_enlarged_battery(
         )
         return
 
-    # Otherwise draw 3 capacity blocks
-    segments = _LEVEL_SEGMENTS[level]
+    # Windows-style continuous capacity bar
+    pad_x = stroke + 10
+    pad_y = stroke + 10
+    ix0 = body[0] + pad_x
+    ix1 = body[2] - pad_x
+    iy0 = body[1] + pad_y
+    iy1 = body[3] - pad_y
+    avail_w = ix1 - ix0
+    bar_radius = 14
 
-    if level is BatteryLevel.UNKNOWN:
+    # Translucent interior track (subtle background showing battery capacity)
+    draw.rounded_rectangle((ix0, iy0, ix1, iy1), radius=bar_radius, fill=(80, 85, 95, 60))
+
+    if level is BatteryLevel.UNKNOWN and percentage is None:
         font = _cached_font(110)
         bbox = draw.textbbox((0, 0), "?", font=font)
         w = bbox[2] - bbox[0]
@@ -201,26 +205,25 @@ def _draw_enlarged_battery(
         )
         return
 
-    pad_x = stroke + 10
-    pad_y = stroke + 10
-    ix0 = body[0] + pad_x
-    ix1 = body[2] - pad_x
-    iy0 = body[1] + pad_y
-    iy1 = body[3] - pad_y
-    avail_w = ix1 - ix0
-    seg_gap = 10
-    sw = (avail_w - (2 * seg_gap)) // 3
-    inactive = (50, 55, 65, 180)
+    # Determine horizontal fill ratio
+    if percentage is not None:
+        fill_ratio = max(0.0, min(1.0, percentage / 100.0))
+    else:
+        coarse_ratios = {
+            BatteryLevel.EMPTY: 0.08,
+            BatteryLevel.LOW: 0.25,
+            BatteryLevel.MEDIUM: 0.60,
+            BatteryLevel.FULL: 1.0,
+        }
+        fill_ratio = coarse_ratios.get(level, 1.0)
 
-    for i in range(3):
-        bx0 = ix0 + i * (sw + seg_gap)
-        bx1 = bx0 + sw
-        f = color if i < segments else inactive
-        draw.rounded_rectangle((bx0, iy0, bx1, iy1), radius=12, fill=f)
+    if fill_ratio > 0:
+        fill_w = max(14, int(avail_w * fill_ratio))
+        draw.rounded_rectangle((ix0, iy0, ix0 + fill_w, iy1), radius=bar_radius, fill=color)
 
 
 def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
-    """Overlay an electric lightning symbol centered over the battery."""
+    """Overlay a white lightning symbol with dark outline centered over the battery."""
     cx = 120
     cy = 128
     y0 = 32
@@ -237,7 +240,7 @@ def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
         for dy in (-2, 0, 2):
             if dx or dy:
                 draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 240))
-    draw.polygon(bolt, fill=(60, 215, 255, 255))
+    draw.polygon(bolt, fill=(255, 255, 255, 255))
 
 
 def _draw_disconnected(draw: ImageDraw.ImageDraw) -> None:

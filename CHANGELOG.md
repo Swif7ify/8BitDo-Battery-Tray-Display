@@ -10,15 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2026-09-17
 
 ### Initial Release
-- **Wide Landscape Transparent Battery Tray Icon**:
-  - Designed in an ultra-wide horizontal landscape aspect ratio with a transparent background that fills the Windows taskbar slot.
+- **Windows-Style Transparent Battery Tray Icon**:
+  - Full-width horizontal battery geometry that cleanly fills the Windows taskbar slot.
   - Multi-directional dark outline guarantees high-contrast visibility on both dark and light taskbar themes.
-  - High-luminance, ultra-bold numbers using Arial Black / Impact font rendering.
-- **Smart Dual-Mode Battery Display**:
-  - **Bluetooth Dual-Mode (Exact %)**: Displays the bold numeric percentage (e.g. `88%`) centered inside the wide battery, color-coded to the charge level (Electric Green for high, Amber for medium, Red for low, Cyan for charging).
-  - **2.4 GHz Coarse Mode (Segments)**: Displays 3 capacity blocks inside the wide horizontal battery when running purely over the 2.4 GHz USB adapter.
-  - ⚡ **Electric Cyan Lightning Bolt**: Overlays across the battery when charging.
+  - Smooth continuous capacity fill bar (matching native Windows battery behavior), color-coded by charge level (Electric Green, Amber, Orange, and Red).
+  - ⚡ **Charging Indicator**: Bright white lightning bolt with dark outline overlays the battery when charging.
   - ⚪ **Muted Neutral Cross**: Clean disconnected / sleep indicator.
+  - Hover tooltip displays the exact percentage, connection type, and charging state.
 - **Custom Application Icon & Metadata**:
   - Embedded multi-resolution `logo.ico` and version information for OneDevPH into `8BitDoBatteryTray.exe`.
   - Authenticode code signing with RFC 3161 timestamping.
