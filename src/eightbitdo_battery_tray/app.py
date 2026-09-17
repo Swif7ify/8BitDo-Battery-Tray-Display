@@ -10,7 +10,7 @@ from pystray import Menu, MenuItem
 
 from .battery import Composite8BitDoBatteryProvider
 from .icon_factory import make_icon
-from .model import BatterySnapshot
+from .model import BatterySnapshot, estimate_remaining_hours
 from .monitor import BatteryMonitor
 
 LOGGER = logging.getLogger(__name__)
@@ -40,7 +40,14 @@ class TrayApplication:
 
         if s.connected:
             charge_str = " (Charging)" if s.charging else ""
-            pct_str = f"{s.percentage}%" if s.percentage is not None else "Connected"
+            if s.percentage is not None:
+                if s.charging:
+                    pct_str = f"{s.percentage}%"
+                else:
+                    est = estimate_remaining_hours(s.percentage)
+                    pct_str = f"{s.percentage}% ({est} left)" if est else f"{s.percentage}%"
+            else:
+                pct_str = "Connected"
             conn_str = f" via {s.connection_type}" if s.connection_type else ""
             status_text = f"● 8BitDo: {pct_str}{charge_str}{conn_str}"
         else:
@@ -84,8 +91,12 @@ class TrayApplication:
         is_charging = bool(snapshot.charging)
         conn_str = f" [{snapshot.connection_type}]" if snapshot.connection_type else ""
         if snapshot.percentage is not None:
-            charge_str = " (Charging)" if is_charging else ""
-            title = f"{APP_NAME} — {snapshot.percentage}%{charge_str}{conn_str}"
+            if is_charging:
+                title = f"{APP_NAME} — {snapshot.percentage}% (Charging){conn_str}"
+            else:
+                est = estimate_remaining_hours(snapshot.percentage)
+                est_str = f" ({est} left)" if est else ""
+                title = f"{APP_NAME} — {snapshot.percentage}%{est_str}{conn_str}"
         elif snapshot.connected:
             charge_str = " (Charging)" if is_charging else ""
             title = f"{APP_NAME} — Connected{charge_str}{conn_str}"
@@ -100,16 +111,11 @@ class TrayApplication:
             snapshot.connection_type,
         )
 
-        # Show number if Bluetooth LE provides exact hardware percentage
-        is_bt = snapshot.connection_type == "Bluetooth LE"
-        show_num = is_bt and (snapshot.percentage is not None)
-
         try:
             self._icon.icon = make_icon(
                 level=snapshot.percentage,
                 charging=is_charging,
                 connected=snapshot.connected,
-                show_number=show_num,
             )
             self._icon.title = title[:127]
             self._icon.menu = self._create_menu()

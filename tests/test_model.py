@@ -38,3 +38,16 @@ def test_battery_snapshot_immutability_and_defaults() -> None:
 
     with pytest.raises(AttributeError):
         snapshot.percentage = 90  # type: ignore[misc]
+
+
+def test_estimate_remaining_hours() -> None:
+    from eightbitdo_battery_tray.model import estimate_remaining_hours
+
+    assert estimate_remaining_hours(None) is None
+    assert estimate_remaining_hours(100) == "~18h"
+    assert estimate_remaining_hours(88) == "~16h"
+    assert estimate_remaining_hours(50) == "~9h"
+    assert estimate_remaining_hours(25) == "~4h"
+    assert estimate_remaining_hours(10) == "~1h 48m"
+    assert estimate_remaining_hours(5) == "~54m"
+    assert estimate_remaining_hours(0) == "~5m"
