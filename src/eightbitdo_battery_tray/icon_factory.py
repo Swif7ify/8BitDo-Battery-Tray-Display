@@ -11,11 +11,11 @@ from .model import BatteryLevel
 ICON_SIZE = 256
 
 _LEVEL_COLORS: dict[BatteryLevel, tuple[int, int, int, int]] = {
-    BatteryLevel.EMPTY: (235, 75, 75, 255),
-    BatteryLevel.LOW: (245, 125, 50, 255),
-    BatteryLevel.MEDIUM: (245, 190, 55, 255),
-    BatteryLevel.FULL: (70, 210, 120, 255),
-    BatteryLevel.UNKNOWN: (150, 150, 160, 255),
+    BatteryLevel.EMPTY: (255, 60, 60, 255),
+    BatteryLevel.LOW: (255, 130, 35, 255),
+    BatteryLevel.MEDIUM: (255, 210, 45, 255),
+    BatteryLevel.FULL: (50, 245, 110, 255),
+    BatteryLevel.UNKNOWN: (160, 165, 175, 255),
 }
 
 _LEVEL_SEGMENTS: dict[BatteryLevel, int] = {
@@ -95,7 +95,7 @@ def make_icon(
     if not connected:
         color = neutral
     elif charging:
-        color = (70, 195, 245, 255)  # Electric Cyan
+        color = (60, 215, 255, 255)  # Electric Cyan
     else:
         color = _LEVEL_COLORS[bat_level]
 
@@ -122,9 +122,9 @@ def _draw_enlarged_battery(
     color: tuple[int, int, int, int],
     percentage: int | None = None,
 ) -> None:
-    """Draw the battery shell maximized across all sides of the canvas."""
-    body = (4, 32, 230, 224)
-    terminal = (230, 86, 252, 170)
+    """Draw the battery shell wider in width, preserving height, across canvas."""
+    body = (1, 32, 238, 224)
+    terminal = (238, 86, 255, 170)
     rad = 34
     stroke = 14
 
@@ -134,18 +134,17 @@ def _draw_enlarged_battery(
         else (245, 248, 255, 255)
     )
 
-    # Multi-directional dark drop halo for contrast on light/dark taskbars
+    # Multi-directional dark drop outline for contrast on light/dark taskbars
     offsets = (
         (-2, 0), (2, 0), (0, -2), (0, 2),
         (-2, -2), (2, 2), (-2, 2), (2, -2),
-        (-1, 0), (1, 0), (0, -1), (0, 1),
     )
     for dx, dy in offsets:
         draw.rounded_rectangle(
             (body[0] + dx, body[1] + dy, body[2] + dx, body[3] + dy),
             radius=rad,
             outline=(10, 10, 15, 240),
-            width=stroke + 6,
+            width=stroke + 4,
         )
         draw.rounded_rectangle(
             (terminal[0] + dx, terminal[1] + dy, terminal[2] + dx, terminal[3] + dy),
@@ -157,7 +156,7 @@ def _draw_enlarged_battery(
     draw.rounded_rectangle(body, radius=rad, outline=shell_color, width=stroke)
     draw.rounded_rectangle(terminal, radius=12, fill=shell_color)
 
-    # If exact percentage is requested, draw bold number inside
+    # If exact percentage is requested, draw bold thick number inside
     if percentage is not None:
         label = str(percentage)
         font = _font_for(label)
@@ -169,12 +168,15 @@ def _draw_enlarged_battery(
         x = cx - (w / 2) - bbox[0]
         y = cy - (h / 2) - bbox[1]
 
-        # Dark halo under text for maximum legibility
-        for dx in (-3, -2, -1, 0, 1, 2, 3):
-            for dy in (-3, -2, -1, 0, 1, 2, 3):
-                if dx or dy:
-                    draw.text((x + dx, y + dy), label, font=font, fill=(10, 10, 15, 240))
-        draw.text((x, y), label, font=font, fill=color)
+        # Crisp stroke outline for maximum visibility without eating into glyph
+        draw.text(
+            (x, y),
+            label,
+            font=font,
+            fill=color,
+            stroke_width=2,
+            stroke_fill=(10, 10, 15, 240),
+        )
         return
 
     # Otherwise draw 3 capacity blocks
@@ -189,9 +191,14 @@ def _draw_enlarged_battery(
         cy = (body[1] + body[3]) / 2
         x = cx - (w / 2) - bbox[0]
         y = cy - (h / 2) - bbox[1]
-        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
-            draw.text((x + dx, y + dy), "?", font=font, fill=(10, 10, 15, 240))
-        draw.text((x, y), "?", font=font, fill=color)
+        draw.text(
+            (x, y),
+            "?",
+            font=font,
+            fill=color,
+            stroke_width=2,
+            stroke_fill=(10, 10, 15, 240),
+        )
         return
 
     pad_x = stroke + 10
@@ -214,7 +221,7 @@ def _draw_enlarged_battery(
 
 def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
     """Overlay an electric lightning symbol centered over the battery."""
-    cx = 117
+    cx = 120
     cy = 128
     y0 = 32
     y1 = 224
@@ -226,17 +233,17 @@ def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
         (cx + 40, cy - 8),
         (cx + 10, cy - 8),
     )
-    for dx in (-3, -2, -1, 0, 1, 2, 3):
-        for dy in (-3, -2, -1, 0, 1, 2, 3):
+    for dx in (-2, 0, 2):
+        for dy in (-2, 0, 2):
             if dx or dy:
-                draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 230))
-    draw.polygon(bolt, fill=(70, 195, 245, 255))
+                draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 240))
+    draw.polygon(bolt, fill=(60, 215, 255, 255))
 
 
 def _draw_disconnected(draw: ImageDraw.ImageDraw) -> None:
     """Draw a neutral disconnected battery with diagonal cross."""
-    body = (4, 32, 230, 224)
-    terminal = (230, 86, 252, 170)
+    body = (1, 32, 238, 224)
+    terminal = (238, 86, 255, 170)
     rad = 34
     stroke = 14
     draw.rounded_rectangle(body, radius=rad, outline=(120, 125, 135, 200), width=stroke)
@@ -255,8 +262,8 @@ def _draw_disconnected(draw: ImageDraw.ImageDraw) -> None:
 
 
 def _font_for(label: str) -> ImageFont.ImageFont:
-    # Size 88 for 3 digits (100), size 115 for 1-2 digits (88)
-    size = 88 if len(label) >= 3 else 115
+    # Size 100 for 3 digits (100), size 142 for 1-2 digits (88)
+    size = 100 if len(label) >= 3 else 142
     return _cached_font(size)
 
 
@@ -264,8 +271,10 @@ def _font_for(label: str) -> ImageFont.ImageFont:
 def _cached_font(size: int) -> ImageFont.ImageFont:
     windows_dir = Path(os.environ.get("WINDIR", r"C:\Windows"))
     candidates = (
-        windows_dir / "Fonts" / "segoeuib.ttf",
+        windows_dir / "Fonts" / "ariblk.ttf",
+        windows_dir / "Fonts" / "impact.ttf",
         windows_dir / "Fonts" / "arialbd.ttf",
+        windows_dir / "Fonts" / "segoeuib.ttf",
     )
     for path in candidates:
         try:

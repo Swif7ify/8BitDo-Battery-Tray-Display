@@ -1,6 +1,10 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot
 
+# Stop any running instances so the binary is not locked during build
+Get-Process -Name "8BitDoBatteryTray" -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-Sleep -Milliseconds 500
+
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
     $pythonCmd = $null
     if (Get-Command py -ErrorAction SilentlyContinue) {
