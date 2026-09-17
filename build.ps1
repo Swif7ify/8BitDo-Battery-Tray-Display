@@ -36,10 +36,12 @@ img.save('logo.ico', format='ICO', sizes=[(16, 16), (24, 24), (32, 32), (48, 48)
     Copy-Item "$PSScriptRoot\logo.png", "$PSScriptRoot\logo.ico" "$PSScriptRoot\src\eightbitdo_battery_tray\assets\" -Force
 }
 
-$iconArg = @()
-if (Test-Path "$PSScriptRoot\logo.ico") {
-    $iconArg = @("--icon", "$PSScriptRoot\logo.ico")
+$iconPath = "$PSScriptRoot\src\eightbitdo_battery_tray\assets\logo.ico"
+if (-not (Test-Path $iconPath) -and (Test-Path "$PSScriptRoot\logo.ico")) {
+    $iconPath = "$PSScriptRoot\logo.ico"
 }
+
+$versionFile = "$PSScriptRoot\file_version_info.txt"
 
 & .\.venv\Scripts\pyinstaller.exe `
     --noconfirm `
@@ -47,7 +49,8 @@ if (Test-Path "$PSScriptRoot\logo.ico") {
     --onefile `
     --windowed `
     --name "8BitDoBatteryTray" `
-    @iconArg `
+    --icon "$iconPath" `
+    --version-file "$versionFile" `
     --paths "$PSScriptRoot\src" `
     --add-data "$PSScriptRoot\src\eightbitdo_battery_tray\assets;eightbitdo_battery_tray/assets" `
     --collect-submodules "winrt.windows.gaming.input" `
@@ -57,4 +60,73 @@ if (Test-Path "$PSScriptRoot\logo.ico") {
     --collect-submodules "winrt.windows.system.power" `
     "$PSScriptRoot\tray_launcher.py"
 
-Write-Host "Built: $PSScriptRoot\dist\8BitDoBatteryTray.exe"
+$exePath = "$PSScriptRoot\dist\8BitDoBatteryTray.exe"
+if (-not (Test-Path $exePath)) {
+    throw "Build failed: $exePath was not found."
+}
+
+# -------------------------------------------------------------
+# Authenticode Code Signing
+# -------------------------------------------------------------
+Write-Host "Configuring Authenticode signature for $exePath..."
+
+if ($env:CODESIGN_PFX -and (Test-Path $env:CODESIGN_PFX)) {
+    # Production / Release PFX signing
+    $signtool = Get-ChildItem "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe" -ErrorAction SilentlyContinue |
+        Sort-Object FullName -Descending | Select-Object -First 1
+
+    if ($signtool) {
+        Write-Host "Signing with SignTool using $env:CODESIGN_PFX..."
+        & $signtool.FullName sign `
+            /fd SHA256 `
+            /f $env:CODESIGN_PFX `
+            /p $env:CODESIGN_PASSWORD `
+            /tr "http://timestamp.digicert.com" `
+            /td SHA256 `
+            /d "8BitDo Battery Tray" `
+            $exePath
+        if ($LASTEXITCODE -ne 0) { throw "Code signing with SignTool failed." }
+
+        Write-Host "Verifying signature with SignTool..."
+        & $signtool.FullName verify /pa /v $exePath
+    } else {
+        Write-Host "Signing with Set-AuthenticodeSignature using $env:CODESIGN_PFX..."
+        $pfxCert = Get-PfxCertificate -FilePath $env:CODESIGN_PFX
+        Set-AuthenticodeSignature `
+            -FilePath $exePath `
+            -Certificate $pfxCert `
+            -HashAlgorithm SHA256 `
+            -TimestampServer "http://timestamp.digicert.com" | Out-Null
+    }
+} else {
+    # Local Developer signing with OneDevPH certificate
+    Write-Host "Signing with OneDevPH developer certificate..."
+    $cert = Get-ChildItem Cert:\CurrentUser\My -CodeSigningCert |
+        Where-Object { $_.Subject -like "*OneDevPH*" } |
+        Select-Object -First 1
+
+    if (-not $cert) {
+        Write-Host "Creating OneDevPH developer code signing certificate..."
+        $cert = New-SelfSignedCertificate `
+            -Type CodeSigningCert `
+            -Subject "CN=OneDevPH, O=OneDevPH" `
+            -CertStoreLocation "Cert:\CurrentUser\My" `
+            -NotAfter (Get-Date).AddYears(5)
+    }
+
+    Set-AuthenticodeSignature `
+        -FilePath $exePath `
+        -Certificate $cert `
+        -HashAlgorithm SHA256 `
+        -TimestampServer "http://timestamp.digicert.com" | Out-Null
+}
+
+$sig = Get-AuthenticodeSignature $exePath
+Write-Host ""
+Write-Host "=========================================================="
+Write-Host " Build & Signing Complete!"
+Write-Host " Executable:  $exePath"
+Write-Host " Signer:      $($sig.SignerCertificate.Subject)"
+Write-Host " Timestamp:   $($sig.TimeStamperCertificate.Subject)"
+Write-Host " Status:      $($sig.Status)"
+Write-Host "=========================================================="
