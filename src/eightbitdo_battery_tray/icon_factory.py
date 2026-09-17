@@ -118,9 +118,9 @@ def _draw_enlarged_battery(
     show_number: bool = False,
 ) -> None:
     """Draw the battery shell and Windows-style fill bar across the canvas."""
-    body = (1, 32, 238, 224)
-    terminal = (238, 86, 255, 170)
-    rad = 34
+    body = (1, 54, 238, 202)
+    terminal = (238, 98, 255, 158)
+    rad = 28
     stroke = 14
 
     shell_color = (
@@ -143,18 +143,18 @@ def _draw_enlarged_battery(
         )
         draw.rounded_rectangle(
             (terminal[0] + dx, terminal[1] + dy, terminal[2] + dx, terminal[3] + dy),
-            radius=12,
+            radius=10,
             fill=(10, 10, 15, 240),
         )
 
     # Battery shell
     draw.rounded_rectangle(body, radius=rad, outline=shell_color, width=stroke)
-    draw.rounded_rectangle(terminal, radius=12, fill=shell_color)
+    draw.rounded_rectangle(terminal, radius=10, fill=shell_color)
 
     # If exact numeric percentage is explicitly requested
     if show_number:
         label = str(percentage) if percentage is not None else "?"
-        font = _font_for(label) if label != "?" else _cached_font(110)
+        font = _font_for(label) if label != "?" else _cached_font(90)
         bbox = draw.textbbox((0, 0), label, font=font)
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
@@ -181,13 +181,13 @@ def _draw_enlarged_battery(
     iy0 = body[1] + pad_y
     iy1 = body[3] - pad_y
     avail_w = ix1 - ix0
-    bar_radius = 14
+    bar_radius = 12
 
     # Translucent interior track (subtle background showing battery capacity)
     draw.rounded_rectangle((ix0, iy0, ix1, iy1), radius=bar_radius, fill=(80, 85, 95, 60))
 
     if level is BatteryLevel.UNKNOWN and percentage is None:
-        font = _cached_font(110)
+        font = _cached_font(90)
         bbox = draw.textbbox((0, 0), "?", font=font)
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
@@ -226,15 +226,15 @@ def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
     """Overlay a white lightning symbol with dark outline centered over the battery."""
     cx = 120
     cy = 128
-    y0 = 32
-    y1 = 224
+    y0 = 54
+    y1 = 202
     bolt = (
-        (cx + 8, y0 + 12),
-        (cx - 36, cy + 2),
+        (cx + 8, y0 + 10),
+        (cx - 32, cy + 2),
         (cx - 4, cy + 2),
-        (cx - 24, y1 - 10),
-        (cx + 40, cy - 8),
-        (cx + 10, cy - 8),
+        (cx - 20, y1 - 8),
+        (cx + 36, cy - 8),
+        (cx + 8, cy - 8),
     )
     for dx in (-2, 0, 2):
         for dy in (-2, 0, 2):
@@ -245,13 +245,13 @@ def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
 
 def _draw_disconnected(draw: ImageDraw.ImageDraw) -> None:
     """Draw a neutral disconnected battery with diagonal cross."""
-    body = (1, 32, 238, 224)
-    terminal = (238, 86, 255, 170)
-    rad = 34
+    body = (1, 54, 238, 202)
+    terminal = (238, 98, 255, 158)
+    rad = 28
     stroke = 14
     draw.rounded_rectangle(body, radius=rad, outline=(120, 125, 135, 200), width=stroke)
-    draw.rounded_rectangle(terminal, radius=12, fill=(120, 125, 135, 200))
-    pad = stroke + 24
+    draw.rounded_rectangle(terminal, radius=10, fill=(120, 125, 135, 200))
+    pad = stroke + 16
     draw.line(
         (body[0] + pad, body[1] + pad, body[2] - pad, body[3] - pad),
         fill=(140, 145, 155, 255),
@@ -265,8 +265,7 @@ def _draw_disconnected(draw: ImageDraw.ImageDraw) -> None:
 
 
 def _font_for(label: str) -> ImageFont.ImageFont:
-    # Size 100 for 3 digits (100), size 142 for 1-2 digits (88)
-    size = 100 if len(label) >= 3 else 142
+    size = 85 if len(label) >= 3 else 115
     return _cached_font(size)
 
 
