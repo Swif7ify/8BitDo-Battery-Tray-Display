@@ -10,14 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2026-09-17
 
 ### Added
-- **Official 8BitDo Branding**: System tray icon now displays the official 8BitDo logo on a sleek dark slate tile.
-- **Color-Coded Battery Checker**:
-  - Replaced plain text numbers with a 4-segment hardware battery meter and state-glowing tile outline.
-  - ⚡ **Electric Cyan with Lightning Bolt**: Controller is actively charging (docked or USB-C).
-  - 🟢 **Vivid Emerald Green (4 bars)**: Good / High battery capacity ($> 50\%$).
-  - 🟡 **Warm Amber (2 bars)**: Medium battery level ($21\% - 50\%$).
-  - 🔴 **Alert Red (1 bar)**: Low battery warning ($\le 20\%$).
-  - ⚪ **Muted Slate Gray (Offline Dot)**: Disconnected / sleep mode.
+- **Enlarged Transparent Battery Tray Icon**:
+  - Removed dark background tile and small logo in favor of a clean, prominent battery icon with transparent background that seamlessly blends into the Windows taskbar.
+  - Drop-shadow outline guarantees high-contrast visibility on both dark and light taskbar themes.
+- **Smart Dual-Mode Battery Display**:
+  - **Bluetooth Dual-Mode (Exact %)**: Displays the bold numeric percentage (e.g. `88%`) inside the battery, color-coded to the charge level (Green for high, Amber for medium, Red for low, Cyan for charging).
+  - **2.4 GHz Coarse Mode (Segments)**: Displays 3 large vertical capacity blocks inside the battery when running purely over the 2.4 GHz USB adapter.
+  - ⚡ **Electric Cyan Lightning Bolt**: Overlays across the battery when charging.
+  - ⚪ **Muted Neutral Cross**: Clean disconnected / sleep indicator.
 - **Accurate Bluetooth LE Battery Provider**:
   - Uses native Windows `cfgmgr32` to read `PKEY_Device_BatteryPercentage` directly from the Bluetooth LE GATT Battery Service.
   - Accurately reports true hardware battery percentage (e.g. `88%`).

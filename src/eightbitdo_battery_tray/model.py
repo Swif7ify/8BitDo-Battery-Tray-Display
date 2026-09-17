@@ -1,6 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
+
+
+class BatteryLevel(StrEnum):
+    EMPTY = "empty"
+    LOW = "low"
+    MEDIUM = "medium"
+    FULL = "full"
+    UNKNOWN = "unknown"
 
 
 @dataclass(frozen=True, slots=True)

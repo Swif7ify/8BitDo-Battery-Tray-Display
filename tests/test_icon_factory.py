@@ -3,6 +3,7 @@ from __future__ import annotations
 from PIL import Image
 
 from eightbitdo_battery_tray.icon_factory import ICON_SIZE, make_icon
+from eightbitdo_battery_tray.model import BatteryLevel
 
 
 def test_make_icon_dimensions_and_mode() -> None:
@@ -10,6 +11,12 @@ def test_make_icon_dimensions_and_mode() -> None:
     assert isinstance(img, Image.Image)
     assert img.size == (ICON_SIZE, ICON_SIZE)
     assert img.mode == "RGBA"
+
+
+def test_make_icon_transparent_background() -> None:
+    img = make_icon(88)
+    # Corner pixel should have alpha == 0 (fully transparent)
+    assert img.getpixel((0, 0))[3] == 0
 
 
 def test_make_icon_labels() -> None:
@@ -25,6 +32,18 @@ def test_make_icon_integer_and_none() -> None:
     assert img_none.size == (ICON_SIZE, ICON_SIZE)
     img_disco = make_icon(None, connected=False)
     assert img_disco.size == (ICON_SIZE, ICON_SIZE)
+
+
+def test_make_icon_battery_level_enum() -> None:
+    for lvl in BatteryLevel:
+        img = make_icon(lvl)
+        assert img.size == (ICON_SIZE, ICON_SIZE)
+
+
+def test_make_icon_number_vs_segments() -> None:
+    img_num = make_icon(88, show_number=True)
+    img_seg = make_icon(88, show_number=False)
+    assert img_num.tobytes() != img_seg.tobytes()
 
 
 def test_make_icon_charging_color() -> None:

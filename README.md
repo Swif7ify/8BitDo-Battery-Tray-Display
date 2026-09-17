@@ -2,19 +2,21 @@
 
 A lightweight, secure, and read-only Windows system tray monitor for the **8BitDo Ultimate 2 Wireless** controller (Bluetooth LE & 2.4 GHz wireless receiver modes).
 
-Featuring an **8BitDo-branded status icon** with a **color-coded battery checker**, dual connection support, and zero gameplay interference.
+Featuring a **large, transparent battery tray icon** that displays either the **exact percentage number** (when Bluetooth dual-mode is active) or **vertical capacity blocks** (in 2.4 GHz coarse mode), with zero gameplay interference.
 
 ---
 
 ## Features
 
-- **Official 8BitDo Branding**: High-contrast system tray icon featuring the 8BitDo logo on a modern dark slate tile.
-- **Hardware-Style 4-Segment Battery Checker**:
-  - ⚡ **Electric Cyan with Lightning Bolt**: Controller is actively charging (docked or plugged into USB-C).
-  - 🟢 **Vivid Green (4 Segments)**: High / Healthy battery ($> 50\%$).
-  - 🟡 **Warm Amber (2 Segments)**: Medium battery ($21\% - 50\%$).
-  - 🔴 **Alert Red (1 Segment)**: Low battery warning ($\le 20\%$).
-  - ⚪ **Muted Slate Gray (Offline Dot)**: Controller disconnected or in sleep mode.
+- **Large, Transparent Battery Icon**: Seamlessly floats on your Windows taskbar with no dark background box, featuring high-contrast drop-shadow outlines for crystal-clear visibility on both dark and light Windows themes.
+- **Smart Dual-Display Modes**:
+  - **Bluetooth Dual-Mode (Exact %)**: When Bluetooth is active, the icon displays the bold numeric percentage (e.g. `88%`) inside the battery, color-coded to the current level:
+    - 🟢 **Vivid Green**: High / Healthy battery ($> 70\%$).
+    - 🟡 **Warm Gold / Amber**: Medium battery ($31\% - 70\%$).
+    - 🟠 **Orange / Red**: Low battery warning ($\le 30\%$).
+  - **2.4 GHz Coarse Mode (Segments)**: When operating exclusively over the 2.4 GHz USB dongle, the icon displays 3 bold vertical capacity blocks (Full = 3 bars, Medium = 2 bars, Low = 1 bar).
+  - ⚡ **Electric Cyan with Lightning Bolt**: Controller is actively charging (docked or USB-C).
+  - ⚪ **Muted Neutral Cross**: Controller is disconnected or in sleep mode.
 - **Accurate Dual Connection Support**:
   - **Bluetooth LE Mode**: Reads the exact hardware battery gauge byte (e.g. `88%`) directly from Windows' Bluetooth LE GATT Battery Service via native `cfgmgr32`.
   - **2.4 GHz Dongle Mode**: Automatically falls back to Windows Gaming Input for the 2.4 GHz receiver (`USB\VID_2DC8&PID_310B` / `0x6012`).

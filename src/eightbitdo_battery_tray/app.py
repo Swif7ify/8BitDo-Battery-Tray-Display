@@ -100,11 +100,16 @@ class TrayApplication:
             snapshot.connection_type,
         )
 
+        # Show number if Bluetooth LE provides exact hardware percentage
+        is_bt = snapshot.connection_type == "Bluetooth LE"
+        show_num = is_bt and (snapshot.percentage is not None)
+
         try:
             self._icon.icon = make_icon(
                 level=snapshot.percentage,
                 charging=is_charging,
                 connected=snapshot.connected,
+                show_number=show_num,
             )
             self._icon.title = title[:127]
             self._icon.menu = self._create_menu()
