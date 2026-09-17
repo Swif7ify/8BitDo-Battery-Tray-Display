@@ -32,6 +32,7 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
     --windowed `
     --name "8BitDoBatteryTray" `
     --paths "$PSScriptRoot\src" `
+    --add-data "$PSScriptRoot\src\eightbitdo_battery_tray\assets;eightbitdo_battery_tray/assets" `
     --collect-submodules "winrt.windows.gaming.input" `
     --collect-submodules "winrt.windows.devices.power" `
     --collect-submodules "winrt.windows.foundation" `

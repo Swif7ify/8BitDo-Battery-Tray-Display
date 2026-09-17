@@ -33,19 +33,21 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _print_once() -> int:
-    from .battery import WindowsGamingInputBatteryProvider
+    from .battery import Composite8BitDoBatteryProvider
 
-    snapshot = WindowsGamingInputBatteryProvider().read()
+    snapshot = Composite8BitDoBatteryProvider().read()
     if not snapshot.connected:
         print("Controller: not detected")
         print(f"Detail: {snapshot.detail or 'n/a'}")
         return 2
 
-    vid = f"0x{snapshot.vendor_id:04X}" if snapshot.vendor_id is not None else "0x2DC8"
-    pid = f"0x{snapshot.product_id:04X}" if snapshot.product_id is not None else "unknown"
+    vid = f"0x{snapshot.vendor_id:04X}" if snapshot.vendor_id is not None else "n/a"
+    pid = f"0x{snapshot.product_id:04X}" if snapshot.product_id is not None else "n/a"
     charge_suffix = " (Charging)" if snapshot.charging else ""
-    print(f"Controller: {snapshot.device_name or '8BitDo Ultimate 2'}")
-    print(f"VID/PID: {vid}/{pid}")
+    connection = f" [{snapshot.connection_type}]" if snapshot.connection_type else ""
+    print(f"Controller: {snapshot.device_name or '8BitDo Controller'}{connection}")
+    if snapshot.vendor_id is not None or snapshot.product_id is not None:
+        print(f"VID/PID: {vid}/{pid}")
     print(
         f"Battery: {snapshot.percentage}%{charge_suffix}"
         if snapshot.percentage is not None

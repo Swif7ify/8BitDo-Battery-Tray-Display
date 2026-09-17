@@ -4,8 +4,11 @@ from unittest.mock import MagicMock
 
 from eightbitdo_battery_tray.battery import (
     TARGET_VID,
+    Composite8BitDoBatteryProvider,
+    WindowsBluetoothBatteryProvider,
     WindowsGamingInputBatteryProvider,
 )
+from eightbitdo_battery_tray.model import BatterySnapshot
 
 
 class DummyController:
@@ -107,6 +110,7 @@ def test_read_with_mocked_provider() -> None:
     assert snap2.charging is True
     assert snap2.vendor_id == TARGET_VID
     assert snap2.product_id == 0x310B
+    assert snap2.connection_type == "2.4GHz Wireless"
 
     # Case 3: Controller found but Windows does not expose numeric capacities
     ctrl_no_capacity = DummyController(
@@ -116,3 +120,64 @@ def test_read_with_mocked_provider() -> None:
     snap3 = provider.read()
     assert snap3.connected is True
     assert snap3.percentage is None
+
+
+def test_composite_provider_prioritizes_bluetooth() -> None:
+    composite = Composite8BitDoBatteryProvider()
+    bt_snap = BatterySnapshot(
+        connected=True,
+        percentage=88,
+        device_name="8BitDo Ultimate 2 Wireless",
+        connection_type="Bluetooth LE",
+    )
+    wgi_snap = BatterySnapshot(
+        connected=True,
+        percentage=100,
+        device_name="Xbox 360 Controller for Windows",
+        connection_type="2.4GHz Wireless",
+    )
+
+    composite._bt_provider.read = MagicMock(return_value=bt_snap)  # type: ignore[method-assign]
+    composite._wgi_provider.read = MagicMock(return_value=wgi_snap)  # type: ignore[method-assign]
+
+    result = composite.read()
+    assert result.connected is True
+    assert result.percentage == 88
+    assert result.connection_type == "Bluetooth LE"
+
+
+def test_composite_provider_falls_back_to_2_4g() -> None:
+    composite = Composite8BitDoBatteryProvider()
+    bt_snap = BatterySnapshot(connected=False, percentage=None)
+    wgi_snap = BatterySnapshot(
+        connected=True,
+        percentage=70,
+        connection_type="2.4GHz Wireless",
+    )
+
+    composite._bt_provider.read = MagicMock(return_value=bt_snap)  # type: ignore[method-assign]
+    composite._wgi_provider.read = MagicMock(return_value=wgi_snap)  # type: ignore[method-assign]
+
+    result = composite.read()
+    assert result.connected is True
+    assert result.percentage == 70
+    assert result.connection_type == "2.4GHz Wireless"
+
+
+def test_composite_provider_neither_connected() -> None:
+    composite = Composite8BitDoBatteryProvider()
+    disconnected = BatterySnapshot(connected=False, percentage=None)
+
+    composite._bt_provider.read = MagicMock(return_value=disconnected)  # type: ignore[method-assign]
+    composite._wgi_provider.read = MagicMock(return_value=disconnected)  # type: ignore[method-assign]
+
+    result = composite.read()
+    assert result.connected is False
+    assert result.percentage is None
+
+
+def test_bluetooth_provider_instantiation() -> None:
+    provider = WindowsBluetoothBatteryProvider()
+    # Ensure read() runs without crashing regardless of whether a controller is currently paired
+    snap = provider.read()
+    assert isinstance(snap, BatterySnapshot)

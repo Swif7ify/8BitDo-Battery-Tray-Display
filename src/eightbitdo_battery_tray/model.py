@@ -11,6 +11,7 @@ class BatterySnapshot:
     device_name: str | None = None
     vendor_id: int | None = None
     product_id: int | None = None
+    connection_type: str | None = None
     detail: str | None = None
 
 

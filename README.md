@@ -1,21 +1,30 @@
 # 8BitDo Ultimate 2 Battery Tray
 
-A lightweight, secure, and read-only Windows system tray monitor for the **8BitDo Ultimate 2 Wireless** controller (2.4 GHz wireless receiver & Bluetooth/DInput modes).
+A lightweight, secure, and read-only Windows system tray monitor for the **8BitDo Ultimate 2 Wireless** controller (Bluetooth LE & 2.4 GHz wireless receiver modes).
+
+Featuring an **8BitDo-branded status icon** with a **color-coded battery checker**, dual connection support, and zero gameplay interference.
 
 ---
 
 ## Features
 
-- **Live System Tray Level**: Real-time numeric battery display right in your Windows taskbar.
-- **Smart Status Color Coding**:
-  - 🟢 **Green outline**: Controller is actively charging (docked or plugged in via USB-C).
-  - ⚪ **Crisp light gray outline**: Normal operating battery level ($> 25\%$).
-  - 🟠 **Amber outline**: Low battery warning ($\le 25\%$).
-  - 🔴 **Red outline**: Critical battery alert ($\le 15\%$).
-  - ⚪ **`--` indicator**: Controller disconnected, asleep, or capacity metrics not exposed by driver.
-- **Per-Monitor V2 DPI Aware**: Crystal-clear, sharp text rendering on 100%, 125%, 150%, and 200%+ display scalings.
-- **100% Read-Only & Safe**: Zero HID writes, zero feature reports, zero rumble commands, and zero firmware modifications.
-- **Ultra-Low Resource Footprint**: Memory-cached icons and fonts, background daemon polling every 10 seconds, zero busy-waiting.
+- **Official 8BitDo Branding**: High-contrast system tray icon featuring the 8BitDo logo on a modern dark slate tile.
+- **Hardware-Style 4-Segment Battery Checker**:
+  - ⚡ **Electric Cyan with Lightning Bolt**: Controller is actively charging (docked or plugged into USB-C).
+  - 🟢 **Vivid Green (4 Segments)**: High / Healthy battery ($> 50\%$).
+  - 🟡 **Warm Amber (2 Segments)**: Medium battery ($21\% - 50\%$).
+  - 🔴 **Alert Red (1 Segment)**: Low battery warning ($\le 20\%$).
+  - ⚪ **Muted Slate Gray (Offline Dot)**: Controller disconnected or in sleep mode.
+- **Accurate Dual Connection Support**:
+  - **Bluetooth LE Mode**: Reads the exact hardware battery gauge byte (e.g. `88%`) directly from Windows' Bluetooth LE GATT Battery Service via native `cfgmgr32`.
+  - **2.4 GHz Dongle Mode**: Automatically falls back to Windows Gaming Input for the 2.4 GHz receiver (`USB\VID_2DC8&PID_310B` / `0x6012`).
+- **Informative Tooltips & Context Menu**:
+  - Hovering over the tray icon displays exact percentage, charging status, and connection mode (e.g., `8BitDo Ultimate 2 — 88% [Bluetooth LE]`).
+  - Right-click menu displays real-time connection status (`● 8BitDo: 88% via Bluetooth LE`), instant manual refresh, diagnostic log viewer, and clean exit.
+- **100% Read-Only & Safe**:
+  - **Zero HID writes**: No arbitrary feature reports or rumble packets injected into your game stream.
+  - Zero dropped inputs, zero input lag, zero controller desync.
+- **Per-Monitor V2 DPI Aware**: Sharp, crystal-clear rendering across all taskbar scaling factors (100%, 125%, 150%, 200%+).
 - **Single-Instance Session Mutex**: Prevents duplicate tray instances per Windows user session.
 - **Complete Privacy**: 0% telemetry, 0% analytics, 0% network connectivity. Local logs are strictly capped at 256 KB.
 
@@ -24,33 +33,36 @@ A lightweight, secure, and read-only Windows system tray monitor for the **8BitD
 ## How It Works
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                    Windows User Session                      │
-│                                                              │
-│  ┌─────────────────────────┐      ┌───────────────────────┐  │
-│  │   8BitDo Battery Tray   │      │  SingleInstance Guard │  │
-│  │    (TrayApplication)    │◄────►│  (Local Named Mutex)  │  │
-│  └───────────┬─────────────┘      └───────────────────────┘  │
-│              │                                               │
-│              ▼ (Event-driven polling every 10s)              │
-│  ┌─────────────────────────┐                                 │
-│  │     BatteryMonitor      │                                 │
-│  │     (Worker Thread)     │                                 │
-│  └───────────┬─────────────┘                                 │
-│              │                                               │
-│              ▼                                               │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │ Windows Gaming Input (WGI) Provider (Read-Only)        │  │
-│  │ - RawGameController.raw_game_controllers               │  │
-│  │ - Matches VID 0x2DC8, PID 0x310B (2.4G) / 0x6012 (BT) │  │
-│  │ - controller.try_get_battery_report()                  │  │
-│  └────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                         Windows User Session                           │
+│                                                                        │
+│  ┌─────────────────────────────┐      ┌─────────────────────────────┐  │
+│  │     8BitDo Battery Tray     │      │    SingleInstance Guard     │  │
+│  │      (TrayApplication)      │◄────►│    (Local Named Mutex)      │  │
+│  └──────────────┬──────────────┘      └─────────────────────────────┘  │
+│                 │                                                      │
+│                 ▼ (Polled every 10s via worker thread)                 │
+│  ┌─────────────────────────────┐                                       │
+│  │   CompositeBatteryProvider  │                                       │
+│  └──────────────┬──────────────┘                                       │
+│                 │                                                      │
+│        ┌────────┴────────────────────────────────────────┐             │
+│        ▼                                                 ▼             │
+│  ┌───────────────────────────┐             ┌─────────────────────────┐ │
+│  │ WindowsBluetoothProvider  │             │ WindowsGamingInput (WGI)│ │
+│  │ - SetupAPI / cfgmgr32     │             │ - RawGameController     │ │
+│  │ - PKEY_BatteryPercentage  │             │ - 2.4 GHz USB Receiver  │ │
+│  │ - Accurate hardware gauge │             │ - XInput / DInput tiers │ │
+│  │   (e.g., exact 88%)       │             │   (Full/Med/Low/Empty)  │ │
+│  └───────────────────────────┘             └─────────────────────────┘ │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **Enumeration**: Queries Windows Gaming Input (`Windows.Gaming.Input.RawGameController`) for 8BitDo controllers (Vendor ID `0x2DC8`, Product IDs `0x310B` for 2.4G XInput and `0x6012` for Bluetooth/DInput).
-2. **Telemetry Extraction**: Fetches `BatteryReport` for remaining and full milliwatt-hours capacity and charging status (`BatteryStatus.Charging` / `charge_rate_in_milliwatts > 0`).
-3. **Dynamic Tray Rendering**: Dynamically paints a high-contrast 64x64 rounded badge with font bearing alignment and updates the notification icon and tooltip.
+### Why the Color Checker? (Bluetooth vs. 2.4 GHz)
+
+- **Bluetooth LE**: Windows natively queries the standard Bluetooth Battery Service (GATT `0x180F`) and stores the exact battery byte in the device property cache (`PKEY_Device_BatteryPercentage`). When connected via Bluetooth, the app reads this exact percentage (e.g. `88%`).
+- **2.4 GHz USB Receiver**: When connected to the 2.4 GHz wireless adapter, the receiver presents to Windows as a standard Microsoft XInput controller (`Xbox 360 Controller for Windows`). Microsoft's XInput protocol only transmits 4 coarse 2-bit battery states (`Full`, `Medium`, `Low`, `Critical`). Windows translates `Full` to synthetic $100\%$ capacity.
+- **Our Approach**: Rather than displaying misleading coarse numbers in 2.4 GHz mode, the system tray icon uses an intuitive **color-coded 4-segment battery checker**. The exact percentage is always visible when you hover over the tray icon or right-click the menu.
 
 ---
 
@@ -58,11 +70,11 @@ A lightweight, secure, and read-only Windows system tray monitor for the **8BitD
 
 ### Prerequisites
 - **Operating System**: Windows 10 or Windows 11 (64-bit).
-- **Python**: Python 3.11, 3.12, 3.13, or newer.
+- **Python**: Python 3.11, 3.12, 3.13, or newer (only needed if running from source).
 
 ---
 
-### Option 1: Run via Batch Script (Easiest)
+### Option 1: Run via Batch Script (From Source)
 
 Simply double-click:
 ```bat
@@ -86,115 +98,70 @@ diagnose.bat
 .\.venv\Scripts\python.exe -m eightbitdo_battery_tray --once
 ```
 
-**Expected output when controller is connected:**
+**Expected output when connected via Bluetooth:**
 ```text
-Controller: 8BitDo Ultimate 2 Wireless Controller for PC
+Controller: 8BitDo Ultimate 2 Wireless [Bluetooth LE]
+Battery: 88%
+Detail: Battery percentage supplied by Bluetooth LE (accurate hardware gauge).
+```
+
+**Expected output when connected via 2.4 GHz Wireless Receiver:**
+```text
+Controller: 8BitDo Ultimate 2 Wireless [2.4GHz Wireless]
 VID/PID: 0x2DC8/0x310B
-Battery: 85%
-Detail: Battery percentage supplied by Windows Gaming Input.
+Battery: 100%
+Detail: Battery level supplied by Windows Gaming Input (2.4 GHz receiver).
 ```
 
 **Output when controller is charging:**
 ```text
-Controller: 8BitDo Ultimate 2 Wireless Controller for PC
+Controller: 8BitDo Ultimate 2 Wireless [2.4GHz Wireless]
 VID/PID: 0x2DC8/0x310B
-Battery: 85% (Charging)
-Detail: Battery percentage supplied by Windows Gaming Input.
+Battery: 100% (Charging)
+Detail: Battery level supplied by Windows Gaming Input (2.4 GHz receiver).
 ```
 
 **Output when controller is disconnected:**
 ```text
 Controller: not detected
-Detail: 8BitDo Ultimate 2 not detected in 2.4 GHz XInput/DInput mode.
+Detail: 8BitDo controller not detected via Bluetooth or 2.4 GHz wireless.
 ```
 
 ---
 
-### Option 3: Build a Standalone `.exe` (No Python Needed)
+### Option 3: Standalone `.exe` (No Python Required)
 
-To package a single-file executable that runs without Python installed:
+A pre-built standalone executable is located in:
+```
+dist\8BitDoBatteryTray.exe
+```
 
-1. Open PowerShell in this folder.
+To build it yourself from source:
+1. Open PowerShell in the project directory.
 2. Run:
    ```powershell
    Set-ExecutionPolicy -Scope Process Bypass
    .\build.ps1
    ```
-3. Your standalone executable will be created at:
-   ```text
-   dist\8BitDoBatteryTray.exe
-   ```
-
-You can move `dist\8BitDoBatteryTray.exe` anywhere you like.
+3. The standalone binary will be created in `dist\8BitDoBatteryTray.exe`.
 
 ---
 
-## Run on Windows Startup
+## Tray Controls & Behavior
 
-To have the monitor launch automatically when you sign in:
-
-1. Press `Win + R`, type `shell:startup`, and press **Enter**.
-2. Right-click inside the folder $\rightarrow$ **New** $\rightarrow$ **Shortcut**.
-3. Set the target to either:
-   - Your built `dist\8BitDoBatteryTray.exe`, or
-   - `run.bat` in this repository.
-4. Click **Next** and **Finish**.
+| Action | Result |
+|---|---|
+| **Hover on Tray Icon** | Displays tooltip with battery level, charging state, and connection mode. |
+| **Right-Click Icon** | Opens context menu with live status summary, **Refresh now**, **Open log**, and **Exit**. |
+| **Double-Click Icon / Refresh** | Forces an immediate battery query cycle instead of waiting for the 10-second timer. |
 
 ---
 
-## Tray Controls & Context Menu
+## Log File Location
 
-Right-click the icon in your system tray to access the menu:
-
-| Menu Action | Description |
-| :--- | :--- |
-| **8BitDo Battery Tray — Running** | Header indicating the application is active. |
-| **Refresh now** *(Default / Double-Click)* | Triggers an immediate controller battery poll. |
-| **Open log** | Opens `%LOCALAPPDATA%\8BitDoBatteryTray\app.log` in your default text editor. |
-| **Exit** | Cleanly terminates the background polling worker and exits the application. |
-
----
-
-## Security, Safety & Privacy
-
-- **Zero Device Modification**: Operates strictly through high-level WinRT interfaces. Does not open raw HID handles, send calibration/configuration packets, toggle controller modes, or write outputs.
-- **Least Privilege**: Does not require Administrator privileges.
-- **Session-Scoped Mutex**: Uses a `Local\` Windows named mutex (`Local\EightBitDoUltimate2BatteryTray_v1`) to prevent multiple tray icons in the same user session without crossing session boundaries.
-- **Log Sanitation**: Local rotating logs never exceed 256 KB (with a maximum of 2 backup rotations). No personal data or credentials are ever recorded.
-- **Offline Assurance**: Contains no network sockets, HTTP requests, or external telemetry hooks.
-
----
-
-## Development & Testing
-
-### Install Dependencies
-```powershell
-.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+Application logs are stored locally in:
 ```
-
-### Code Style & Linter
-Check with Ruff (strictly configured to 0 errors):
-```powershell
-.\.venv\Scripts\ruff.exe check src tests
+%LOCALAPPDATA%\8BitDoBatteryTray\app.log
 ```
-
-### Automated Unit Tests
-Run the pytest test suite:
-```powershell
-.\.venv\Scripts\pytest.exe -v
-```
-
-All 14 automated tests cover:
-- Unit percentage calculations and boundary clampings.
-- Immutability of `BatterySnapshot`.
-- Controller VID/PID matching and disconnection fault tolerance.
-- Battery charging state detection (`charge_rate` and `status`).
-- Icon generation, sizing, glyph bearing centering, and outline colors.
-- Named mutex acquisition, duplicate conflict detection, and cleanup.
-- Worker thread lifecycle and refresh signalling.
-
----
-
-## License
-
-This project is licensed under the MIT License.
+- Maximum file size: 256 KB (rotated once to keep disk usage under 512 KB total).
+- No sensitive user data or game telemetry is ever logged.
