@@ -105,9 +105,21 @@ Many users pair their 8BitDo controller over Bluetooth once, and then use the **
 
 ## Quick Start
 
-### Prerequisites
+### 🚀 Download Pre-Built Executable (Recommended)
+
+If you just want to run the app without installing Python or cloning source code:
+1. Navigate to the **[GitHub Releases](https://github.com/Swif7ify/8BitDo-Battery-Tray-Display/releases)** page.
+2. Under **Assets**, download the standalone binary:
+   ```
+   8BitDoBatteryTray.exe
+   ```
+3. Double-click the downloaded `.exe` to run! It immediately minimizes to your Windows system tray.
+
+---
+
+### Prerequisites (For Running or Building from Source)
 - **Operating System**: Windows 10 or Windows 11 (64-bit).
-- **Python**: Python 3.11, 3.12, 3.13, or newer (only needed if running from source).
+- **Python**: Python 3.11, 3.12, 3.13, or newer (only required if running from source).
 
 ---
 
@@ -166,12 +178,9 @@ Detail: 8BitDo controller not detected via Bluetooth or 2.4 GHz wireless.
 
 ---
 
-### Option 3: Standalone `.exe` (No Python Required)
+### Option 3: Compile Standalone `.exe` from Source
 
-A pre-built standalone executable is located in:
-```
-dist\8BitDoBatteryTray.exe
-```
+If you prefer to compile the standalone binary yourself instead of downloading the pre-built `.exe` from [GitHub Releases](https://github.com/Swif7ify/8BitDo-Battery-Tray-Display/releases):
 
 To build it yourself from source:
 1. Open PowerShell in the project directory.
