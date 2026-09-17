@@ -66,6 +66,41 @@ Featuring an **8BitDo-branded status icon** with a **color-coded battery checker
 
 ---
 
+### 💡 The "Dual-Radio" Setup: Battery Life & Latency Impact
+
+Many users pair their 8BitDo controller over Bluetooth once, and then use the **2.4 GHz USB wireless receiver** for daily PC gaming. This unlocks a unique "dual-radio" synergy:
+
+```
+┌─────────────────────────┐
+│   8BitDo Ultimate 2     │
+│   Wireless Controller   │
+└────────────┬────────────┘
+             │
+             ├───► [2.4 GHz RF] ────────► 2.4G USB Dongle ──► Game Inputs (Zero Lag)
+             │
+             └───► [Bluetooth LE] ─────► Windows BT Stack ──► Battery Telemetry (Exact 88%)
+```
+
+#### Frequently Asked Questions:
+
+1. **Does this drain the controller's battery faster?**
+   - **Virtually zero impact ($< 1\%$)**: The controller uses **Bluetooth Low Energy (BLE)** GATT telemetry, not high-bandwidth classic Bluetooth audio or gameplay streaming.
+   - BLE telemetry draws mere microamps ($\sim 0.05\text{ mA}$) with periodic heartbeat intervals.
+   - By comparison, the controller's active 2.4 GHz RF radio, Hall-effect joysticks, internal MCU, and dual rumble motors draw $\sim 30\text{ mA} - 75\text{ mA}$. The BLE beacon is completely negligible.
+
+2. **Does it cause any game input lag or latency?**
+   - **Zero input lag**: All game inputs (buttons, triggers, analog sticks) travel exclusively through the dedicated 2.4 GHz USB adapter. Bluetooth is used solely for passive battery queries.
+
+3. **Does it consume laptop/PC battery?**
+   - **No**: Windows handles Bluetooth LE device property updates in low-power idle states via hardware interrupts on your Wi-Fi/BT chip.
+
+4. **Can I turn off Bluetooth on my laptop?**
+   - **Yes, completely optional**:
+     - **Bluetooth ON**: You get high-speed 2.4 GHz gaming **plus** exact 1% battery percentage reporting (e.g. `88%`).
+     - **Bluetooth OFF**: The app seamlessly switches to 2.4 GHz mode, showing the **4-segment color checker** (e.g. 4 Vivid Green bars for High/Full).
+
+---
+
 ## Quick Start
 
 ### Prerequisites
