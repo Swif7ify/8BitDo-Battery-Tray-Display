@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .model import BatteryLevel
 
-ICON_SIZE = 64
+ICON_SIZE = 256
 
 _LEVEL_COLORS: dict[BatteryLevel, tuple[int, int, int, int]] = {
     BatteryLevel.EMPTY: (235, 75, 75, 255),
@@ -122,33 +122,40 @@ def _draw_enlarged_battery(
     color: tuple[int, int, int, int],
     percentage: int | None = None,
 ) -> None:
-    """Draw the battery shell in a wide landscape format across the canvas."""
-    body = (1, 16, 55, 48)
-    terminal = (56, 24, 62, 40)
+    """Draw the battery shell maximized across all sides of the canvas."""
+    body = (4, 32, 230, 224)
+    terminal = (230, 86, 252, 170)
+    rad = 34
+    stroke = 14
+
     shell_color = (
         color
         if (level == BatteryLevel.EMPTY and percentage is None)
         else (245, 248, 255, 255)
     )
 
-    # Dark drop outline for crisp contrast on light/dark taskbars
-    offsets = ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1))
+    # Multi-directional dark drop halo for contrast on light/dark taskbars
+    offsets = (
+        (-2, 0), (2, 0), (0, -2), (0, 2),
+        (-2, -2), (2, 2), (-2, 2), (2, -2),
+        (-1, 0), (1, 0), (0, -1), (0, 1),
+    )
     for dx, dy in offsets:
         draw.rounded_rectangle(
             (body[0] + dx, body[1] + dy, body[2] + dx, body[3] + dy),
-            radius=6,
+            radius=rad,
             outline=(10, 10, 15, 240),
-            width=4,
+            width=stroke + 6,
         )
         draw.rounded_rectangle(
             (terminal[0] + dx, terminal[1] + dy, terminal[2] + dx, terminal[3] + dy),
-            radius=2,
+            radius=12,
             fill=(10, 10, 15, 240),
         )
 
     # Battery shell
-    draw.rounded_rectangle(body, radius=6, outline=shell_color, width=3)
-    draw.rounded_rectangle(terminal, radius=2, fill=shell_color)
+    draw.rounded_rectangle(body, radius=rad, outline=shell_color, width=stroke)
+    draw.rounded_rectangle(terminal, radius=12, fill=shell_color)
 
     # If exact percentage is requested, draw bold number inside
     if percentage is not None:
@@ -157,71 +164,99 @@ def _draw_enlarged_battery(
         bbox = draw.textbbox((0, 0), label, font=font)
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
-        x = 28 - (w / 2) - bbox[0]
-        y = 32 - (h / 2) - bbox[1]
+        cx = (body[0] + body[2]) / 2
+        cy = (body[1] + body[3]) / 2
+        x = cx - (w / 2) - bbox[0]
+        y = cy - (h / 2) - bbox[1]
 
         # Dark halo under text for maximum legibility
-        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            draw.text((x + dx, y + dy), label, font=font, fill=(10, 10, 15, 240))
+        for dx in (-3, -2, -1, 0, 1, 2, 3):
+            for dy in (-3, -2, -1, 0, 1, 2, 3):
+                if dx or dy:
+                    draw.text((x + dx, y + dy), label, font=font, fill=(10, 10, 15, 240))
         draw.text((x, y), label, font=font, fill=color)
         return
 
-    # Otherwise draw 3 horizontal capacity blocks
+    # Otherwise draw 3 capacity blocks
     segments = _LEVEL_SEGMENTS[level]
 
     if level is BatteryLevel.UNKNOWN:
-        font = _cached_font(24)
+        font = _cached_font(110)
         bbox = draw.textbbox((0, 0), "?", font=font)
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
-        x = 28 - (w / 2) - bbox[0]
-        y = 32 - (h / 2) - bbox[1]
-        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        cx = (body[0] + body[2]) / 2
+        cy = (body[1] + body[3]) / 2
+        x = cx - (w / 2) - bbox[0]
+        y = cy - (h / 2) - bbox[1]
+        for dx, dy in ((-2, 0), (2, 0), (0, -2), (0, 2)):
             draw.text((x + dx, y + dy), "?", font=font, fill=(10, 10, 15, 240))
         draw.text((x, y), "?", font=font, fill=color)
         return
 
-    segment_boxes = (
-        (8, 22, 20, 42),
-        (23, 22, 35, 42),
-        (38, 22, 50, 42),
-    )
-
+    pad_x = stroke + 10
+    pad_y = stroke + 10
+    ix0 = body[0] + pad_x
+    ix1 = body[2] - pad_x
+    iy0 = body[1] + pad_y
+    iy1 = body[3] - pad_y
+    avail_w = ix1 - ix0
+    seg_gap = 10
+    sw = (avail_w - (2 * seg_gap)) // 3
     inactive = (50, 55, 65, 180)
 
-    for index, box in enumerate(segment_boxes):
-        fill = color if index < segments else inactive
-        draw.rounded_rectangle(box, radius=3, fill=fill)
+    for i in range(3):
+        bx0 = ix0 + i * (sw + seg_gap)
+        bx1 = bx0 + sw
+        f = color if i < segments else inactive
+        draw.rounded_rectangle((bx0, iy0, bx1, iy1), radius=12, fill=f)
 
 
 def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
-    """Overlay an electric lightning symbol centered over the wide battery."""
+    """Overlay an electric lightning symbol centered over the battery."""
+    cx = 117
+    cy = 128
+    y0 = 32
+    y1 = 224
     bolt = (
-        (32, 10),
-        (23, 30),
-        (29, 30),
-        (25, 54),
-        (39, 27),
-        (33, 27),
+        (cx + 8, y0 + 12),
+        (cx - 36, cy + 2),
+        (cx - 4, cy + 2),
+        (cx - 24, y1 - 10),
+        (cx + 40, cy - 8),
+        (cx + 10, cy - 8),
     )
-    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1)):
-        draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 230))
-    draw.polygon(bolt, fill=(255, 255, 255, 255))
+    for dx in (-3, -2, -1, 0, 1, 2, 3):
+        for dy in (-3, -2, -1, 0, 1, 2, 3):
+            if dx or dy:
+                draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 230))
+    draw.polygon(bolt, fill=(70, 195, 245, 255))
 
 
 def _draw_disconnected(draw: ImageDraw.ImageDraw) -> None:
-    """Draw a neutral disconnected wide battery with diagonal cross."""
-    body = (1, 16, 55, 48)
-    terminal = (56, 24, 62, 40)
-    draw.rounded_rectangle(body, radius=6, outline=(120, 125, 135, 200), width=3)
-    draw.rounded_rectangle(terminal, radius=2, fill=(120, 125, 135, 200))
-    draw.line((14, 21, 42, 43), fill=(140, 145, 155, 255), width=4)
-    draw.line((42, 21, 14, 43), fill=(140, 145, 155, 255), width=4)
+    """Draw a neutral disconnected battery with diagonal cross."""
+    body = (4, 32, 230, 224)
+    terminal = (230, 86, 252, 170)
+    rad = 34
+    stroke = 14
+    draw.rounded_rectangle(body, radius=rad, outline=(120, 125, 135, 200), width=stroke)
+    draw.rounded_rectangle(terminal, radius=12, fill=(120, 125, 135, 200))
+    pad = stroke + 24
+    draw.line(
+        (body[0] + pad, body[1] + pad, body[2] - pad, body[3] - pad),
+        fill=(140, 145, 155, 255),
+        width=int(stroke * 1.2),
+    )
+    draw.line(
+        (body[2] - pad, body[1] + pad, body[0] + pad, body[3] - pad),
+        fill=(140, 145, 155, 255),
+        width=int(stroke * 1.2),
+    )
 
 
 def _font_for(label: str) -> ImageFont.ImageFont:
-    # Size 20 for 3 digits (100), size 26 for 1-2 digits (88)
-    size = 20 if len(label) >= 3 else 26
+    # Size 88 for 3 digits (100), size 115 for 1-2 digits (88)
+    size = 88 if len(label) >= 3 else 115
     return _cached_font(size)
 
 
