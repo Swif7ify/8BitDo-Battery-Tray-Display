@@ -10,7 +10,6 @@ from .model import BatteryLevel
 
 ICON_SIZE = 64
 
-
 _LEVEL_COLORS: dict[BatteryLevel, tuple[int, int, int, int]] = {
     BatteryLevel.EMPTY: (235, 75, 75, 255),
     BatteryLevel.LOW: (245, 125, 50, 255),
@@ -49,10 +48,10 @@ def make_icon(
     charging: bool = False,
     show_number: bool | None = None,
 ) -> Image.Image:
-    """Create a large, transparent Windows tray icon.
+    """Create a maximum-size, transparent Windows tray icon.
 
-    Displays either an exact percentage number (e.g. from Bluetooth LE dual mode)
-    or large vertical capacity blocks (e.g. from 2.4 GHz coarse mode).
+    Displays either an enlarged numeric percentage (Bluetooth LE dual mode)
+    or maximum-size vertical capacity blocks (2.4 GHz coarse mode).
     """
     pct: int | None = None
     bat_level: BatteryLevel = BatteryLevel.FULL
@@ -123,31 +122,31 @@ def _draw_enlarged_battery(
     color: tuple[int, int, int, int],
     percentage: int | None = None,
 ) -> None:
-    """Draw the central battery symbol enlarged across the canvas without dark tile."""
-    body = (4, 12, 53, 52)
-    terminal = (54, 23, 60, 41)
-    shell_color = (235, 238, 245, 255)
+    """Draw the battery shell maximized across the canvas."""
+    body = (1, 2, 56, 61)
+    terminal = (57, 18, 63, 45)
+    shell_color = (245, 248, 255, 255)
 
-    # Dark drop outline for crisp contrast against light taskbars
+    # Dark drop outline for crisp contrast on light/dark taskbars
     offsets = ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1))
     for dx, dy in offsets:
         draw.rounded_rectangle(
             (body[0] + dx, body[1] + dy, body[2] + dx, body[3] + dy),
-            radius=7,
-            outline=(15, 15, 20, 160),
+            radius=8,
+            outline=(10, 10, 15, 240),
             width=4,
         )
         draw.rounded_rectangle(
             (terminal[0] + dx, terminal[1] + dy, terminal[2] + dx, terminal[3] + dy),
             radius=3,
-            fill=(15, 15, 20, 160),
+            fill=(10, 10, 15, 240),
         )
 
     # Battery shell
-    draw.rounded_rectangle(body, radius=7, outline=shell_color, width=3)
+    draw.rounded_rectangle(body, radius=8, outline=shell_color, width=3)
     draw.rounded_rectangle(terminal, radius=3, fill=shell_color)
 
-    # If exact percentage is requested, draw the bold number inside
+    # If exact percentage is requested, draw maximum-size bold number inside
     if percentage is not None:
         label = str(percentage)
         font = _font_for(label)
@@ -155,67 +154,68 @@ def _draw_enlarged_battery(
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
         x = 28 - (w / 2) - bbox[0]
-        y = 32 - (h / 2) - bbox[1]
+        y = 31 - (h / 2) - bbox[1]
 
-        # Subtle dark halo under text for maximum legibility
-        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-            draw.text((x + dx, y + dy), label, font=font, fill=(10, 10, 15, 180))
+        # Dark halo under text for maximum legibility
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1)):
+            draw.text((x + dx, y + dy), label, font=font, fill=(10, 10, 15, 230))
         draw.text((x, y), label, font=font, fill=color)
         return
 
-    # Otherwise draw the 3 large capacity segment blocks
+    # Otherwise draw 3 maximized vertical capacity blocks
     segments = _LEVEL_SEGMENTS[level]
 
     if level is BatteryLevel.UNKNOWN:
-        font = _cached_font(26)
+        font = _cached_font(32)
         bbox = draw.textbbox((0, 0), "?", font=font)
         w = bbox[2] - bbox[0]
         h = bbox[3] - bbox[1]
         x = 28 - (w / 2) - bbox[0]
-        y = 32 - (h / 2) - bbox[1]
+        y = 31 - (h / 2) - bbox[1]
         draw.text((x, y), "?", font=font, fill=color)
         return
 
     segment_boxes = (
-        (10, 18, 20, 46),
-        (23, 18, 33, 46),
-        (36, 18, 46, 46),
+        (8, 9, 20, 54),
+        (24, 9, 36, 54),
+        (40, 9, 52, 54),
     )
 
     inactive = (50, 55, 65, 180)
 
     for index, box in enumerate(segment_boxes):
         fill = color if index < segments else inactive
-        draw.rounded_rectangle(box, radius=3, fill=fill)
+        draw.rounded_rectangle(box, radius=4, fill=fill)
 
 
 def _draw_charge_symbol(draw: ImageDraw.ImageDraw) -> None:
-    """Overlay a compact lightning symbol."""
+    """Overlay a giant lightning symbol."""
     bolt = (
-        (32, 8),
-        (24, 28),
-        (30, 28),
-        (25, 52),
-        (40, 24),
-        (34, 24),
+        (32, 6),
+        (22, 29),
+        (29, 29),
+        (24, 56),
+        (42, 24),
+        (35, 24),
     )
     for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-        draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 200))
+        draw.polygon([(bx + dx, by + dy) for bx, by in bolt], fill=(10, 10, 15, 220))
     draw.polygon(bolt, fill=(255, 255, 255, 255))
 
 
 def _draw_disconnected(draw: ImageDraw.ImageDraw) -> None:
-    """Draw a neutral disconnected battery with diagonal cross."""
-    body = (4, 12, 53, 52)
-    terminal = (54, 23, 60, 41)
-    draw.rounded_rectangle(body, radius=7, outline=(120, 125, 135, 200), width=3)
+    """Draw a neutral disconnected battery with large diagonal cross."""
+    body = (1, 2, 56, 61)
+    terminal = (57, 18, 63, 45)
+    draw.rounded_rectangle(body, radius=8, outline=(120, 125, 135, 200), width=3)
     draw.rounded_rectangle(terminal, radius=3, fill=(120, 125, 135, 200))
-    draw.line((14, 20, 43, 44), fill=(140, 145, 155, 255), width=4)
-    draw.line((43, 20, 14, 44), fill=(140, 145, 155, 255), width=4)
+    draw.line((10, 10, 48, 53), fill=(140, 145, 155, 255), width=5)
+    draw.line((48, 10, 10, 53), fill=(140, 145, 155, 255), width=5)
 
 
 def _font_for(label: str) -> ImageFont.ImageFont:
-    size = 20 if len(label) >= 3 else 28
+    # Size 29 for 3 digits (100), size 42 for 1-2 digits (88)
+    size = 29 if len(label) >= 3 else 42
     return _cached_font(size)
 
 
