@@ -1,4 +1,7 @@
-# 8BitDo Ultimate 2 Battery Tray
+# 8BitDo Ultimate 2 Battery Tray 
+<div align="center">
+  <img width="96" height="96" alt="logo" src="https://github.com/user-attachments/assets/a2be8bf9-b3d7-49c2-a6d1-74c9786f326a" />
+</div>
 
 A lightweight, secure, and read-only Windows system tray monitor for the **8BitDo Ultimate 2 Wireless** controller (Bluetooth LE & 2.4 GHz wireless receiver modes).
 
