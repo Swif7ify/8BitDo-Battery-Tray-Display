@@ -7,6 +7,10 @@ A lightweight, secure, and read-only Windows system tray monitor for the **8BitD
 
 Featuring a **large, transparent battery tray icon** that displays either the **exact percentage number** (when Bluetooth dual-mode is active) or **vertical capacity blocks** (in 2.4 GHz coarse mode), with zero gameplay interference.
 
+<div align="center">
+  <img width="416" height="130" alt="image" src="https://github.com/user-attachments/assets/a83e5faf-22f1-4d4a-9a45-634be7995449" />
+</div>
+
 ---
 
 ## Features
@@ -117,6 +121,20 @@ If you just want to run the app without installing Python or cloning source code
    8BitDoBatteryTray.exe
    ```
 3. Double-click the downloaded `.exe` to run! It immediately minimizes to your Windows system tray.
+
+### 🛡️ If Windows Blocks the App / Does Not Trust the Certificate
+
+If Windows shows a security warning or does not yet trust the app's signing certificate, you can manually install the certificate from the signed executable:
+
+1. Right-click `8BitDoBatteryTray.exe` and select **Properties**.
+2. Open the **Digital Signatures** tab.
+3. Select the certificate/signature in the list, then click **Details** (or double-click the signature).
+4. Click **View Certificate**.
+5. Click **Install Certificate...**.
+6. Follow the Certificate Import Wizard: **Next → Next → Finish**.
+7. Close the dialogs, then try launching `8BitDoBatteryTray.exe` again.
+
+> **Note:** Installing the certificate tells Windows that you trust the certificate used to sign this application. Windows security features such as Smart App Control may still apply their own reputation and security checks, so certificate installation is not a guaranteed bypass.
 
 ---
 
