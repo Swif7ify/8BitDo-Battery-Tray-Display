@@ -7,6 +7,7 @@ from eightbitdo_battery_tray.battery import (
     Composite8BitDoBatteryProvider,
     WindowsBluetoothBatteryProvider,
     WindowsGamingInputBatteryProvider,
+    WindowsHid8BitDoBatteryProvider,
 )
 from eightbitdo_battery_tray.model import BatterySnapshot
 
@@ -122,8 +123,14 @@ def test_read_with_mocked_provider() -> None:
     assert snap3.percentage is None
 
 
-def test_composite_provider_prioritizes_bluetooth() -> None:
+def test_composite_provider_prioritizes_hid() -> None:
     composite = Composite8BitDoBatteryProvider()
+    hid_snap = BatterySnapshot(
+        connected=True,
+        percentage=83,
+        device_name="8BitDo Ultimate 2 Wireless Controller for PC",
+        connection_type="2.4GHz Wireless",
+    )
     bt_snap = BatterySnapshot(
         connected=True,
         percentage=88,
@@ -137,6 +144,33 @@ def test_composite_provider_prioritizes_bluetooth() -> None:
         connection_type="2.4GHz Wireless",
     )
 
+    composite._hid_provider.read = MagicMock(return_value=hid_snap)  # type: ignore[method-assign]
+    composite._bt_provider.read = MagicMock(return_value=bt_snap)  # type: ignore[method-assign]
+    composite._wgi_provider.read = MagicMock(return_value=wgi_snap)  # type: ignore[method-assign]
+
+    result = composite.read()
+    assert result.connected is True
+    assert result.percentage == 83
+    assert result.connection_type == "2.4GHz Wireless"
+
+
+def test_composite_provider_prioritizes_bluetooth_over_wgi() -> None:
+    composite = Composite8BitDoBatteryProvider()
+    hid_snap = BatterySnapshot(connected=False, percentage=None)
+    bt_snap = BatterySnapshot(
+        connected=True,
+        percentage=88,
+        device_name="8BitDo Ultimate 2 Wireless",
+        connection_type="Bluetooth LE",
+    )
+    wgi_snap = BatterySnapshot(
+        connected=True,
+        percentage=100,
+        device_name="Xbox 360 Controller for Windows",
+        connection_type="2.4GHz Wireless",
+    )
+
+    composite._hid_provider.read = MagicMock(return_value=hid_snap)  # type: ignore[method-assign]
     composite._bt_provider.read = MagicMock(return_value=bt_snap)  # type: ignore[method-assign]
     composite._wgi_provider.read = MagicMock(return_value=wgi_snap)  # type: ignore[method-assign]
 
@@ -146,8 +180,9 @@ def test_composite_provider_prioritizes_bluetooth() -> None:
     assert result.connection_type == "Bluetooth LE"
 
 
-def test_composite_provider_falls_back_to_2_4g() -> None:
+def test_composite_provider_falls_back_to_wgi() -> None:
     composite = Composite8BitDoBatteryProvider()
+    hid_snap = BatterySnapshot(connected=False, percentage=None)
     bt_snap = BatterySnapshot(connected=False, percentage=None)
     wgi_snap = BatterySnapshot(
         connected=True,
@@ -155,6 +190,7 @@ def test_composite_provider_falls_back_to_2_4g() -> None:
         connection_type="2.4GHz Wireless",
     )
 
+    composite._hid_provider.read = MagicMock(return_value=hid_snap)  # type: ignore[method-assign]
     composite._bt_provider.read = MagicMock(return_value=bt_snap)  # type: ignore[method-assign]
     composite._wgi_provider.read = MagicMock(return_value=wgi_snap)  # type: ignore[method-assign]
 
@@ -164,10 +200,11 @@ def test_composite_provider_falls_back_to_2_4g() -> None:
     assert result.connection_type == "2.4GHz Wireless"
 
 
-def test_composite_provider_neither_connected() -> None:
+def test_composite_provider_none_connected() -> None:
     composite = Composite8BitDoBatteryProvider()
     disconnected = BatterySnapshot(connected=False, percentage=None)
 
+    composite._hid_provider.read = MagicMock(return_value=disconnected)  # type: ignore[method-assign]
     composite._bt_provider.read = MagicMock(return_value=disconnected)  # type: ignore[method-assign]
     composite._wgi_provider.read = MagicMock(return_value=disconnected)  # type: ignore[method-assign]
 
@@ -176,8 +213,13 @@ def test_composite_provider_neither_connected() -> None:
     assert result.percentage is None
 
 
+def test_hid_provider_instantiation() -> None:
+    provider = WindowsHid8BitDoBatteryProvider()
+    snap = provider.read()
+    assert isinstance(snap, BatterySnapshot)
+
+
 def test_bluetooth_provider_instantiation() -> None:
     provider = WindowsBluetoothBatteryProvider()
-    # Ensure read() runs without crashing regardless of whether a controller is currently paired
     snap = provider.read()
     assert isinstance(snap, BatterySnapshot)

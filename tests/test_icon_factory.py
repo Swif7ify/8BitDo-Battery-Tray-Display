@@ -62,3 +62,9 @@ def test_make_icon_disconnected_state() -> None:
     img_connected = make_icon(88, connected=True)
     img_disconnected = make_icon(88, connected=False)
     assert img_connected.tobytes() != img_disconnected.tobytes()
+
+
+def test_make_icon_unknown_connected() -> None:
+    img = make_icon(BatteryLevel.UNKNOWN, connected=True)
+    assert img.size == (ICON_SIZE, ICON_SIZE)
+

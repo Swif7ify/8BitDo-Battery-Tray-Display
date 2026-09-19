@@ -186,25 +186,6 @@ def _draw_enlarged_battery(
     # Translucent interior track (subtle background showing battery capacity)
     draw.rounded_rectangle((ix0, iy0, ix1, iy1), radius=bar_radius, fill=(80, 85, 95, 60))
 
-    if level is BatteryLevel.UNKNOWN and percentage is None:
-        font = _cached_font(90)
-        bbox = draw.textbbox((0, 0), "?", font=font)
-        w = bbox[2] - bbox[0]
-        h = bbox[3] - bbox[1]
-        cx = (body[0] + body[2]) / 2
-        cy = (body[1] + body[3]) / 2
-        x = cx - (w / 2) - bbox[0]
-        y = cy - (h / 2) - bbox[1]
-        draw.text(
-            (x, y),
-            "?",
-            font=font,
-            fill=color,
-            stroke_width=2,
-            stroke_fill=(10, 10, 15, 240),
-        )
-        return
-
     # Determine horizontal fill ratio
     if percentage is not None:
         fill_ratio = max(0.0, min(1.0, percentage / 100.0))
@@ -214,8 +195,9 @@ def _draw_enlarged_battery(
             BatteryLevel.LOW: 0.25,
             BatteryLevel.MEDIUM: 0.60,
             BatteryLevel.FULL: 1.0,
+            BatteryLevel.UNKNOWN: 0.50,
         }
-        fill_ratio = coarse_ratios.get(level, 1.0)
+        fill_ratio = coarse_ratios.get(level, 0.50)
 
     if fill_ratio > 0:
         fill_w = max(14, int(avail_w * fill_ratio))

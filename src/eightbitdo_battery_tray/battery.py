@@ -18,7 +18,8 @@ TARGET_VID = 0x2DC8
 # Ultimate 2 Wireless over the 2.4 GHz receiver:
 #   0x310B = XInput mode
 #   0x6012 = DInput mode
-TARGET_PIDS = frozenset({0x310B, 0x6012})
+#   0x6013 = DInput alternate mode
+TARGET_PIDS = frozenset({0x310B, 0x6012, 0x6013})
 
 # SetupAPI / CfgMgr32 DEVPROPKEY definition
 class _GUID(Structure):
@@ -34,6 +35,41 @@ class _DEVPROPKEY(Structure):
     _fields_ = [("fmtid", _GUID), ("pid", wintypes.ULONG)]
 
 
+class _HIDD_ATTRIBUTES(Structure):
+    _fields_ = [
+        ("Size", wintypes.ULONG),
+        ("VendorID", wintypes.USHORT),
+        ("ProductID", wintypes.USHORT),
+        ("VersionNumber", wintypes.USHORT),
+    ]
+
+
+class _OVERLAPPED(Structure):
+    _fields_ = [
+        ("Internal", ctypes.c_void_p),
+        ("InternalHigh", ctypes.c_void_p),
+        ("Offset", wintypes.DWORD),
+        ("OffsetHigh", wintypes.DWORD),
+        ("hEvent", wintypes.HANDLE),
+    ]
+
+
+# GUID_DEVINTERFACE_HID: {4d1e55b2-f16f-11cf-88cb-001111000030}
+_GUID_DEVINTERFACE_HID = _GUID(
+    0x4D1E55B2,
+    0xF16F,
+    0x11CF,
+    (c_byte * 8)(0x88, 0xCB, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30),
+)
+
+_GENERIC_READ = 0x80000000
+_FILE_SHARE_READ = 0x00000001
+_FILE_SHARE_WRITE = 0x00000002
+_OPEN_EXISTING = 3
+_FILE_FLAG_OVERLAPPED = 0x40000000
+_ERROR_IO_PENDING = 997
+_WAIT_OBJECT_0 = 0
+
 # Standard Windows Device Property Keys:
 # DEVPKEY_NAME: {B725F130-47EF-101A-A5F1-02608C9EEBAC}, 10
 _PKEY_NAME = _DEVPROPKEY(
@@ -48,6 +84,164 @@ _PKEY_BATT = _DEVPROPKEY(
 
 _CR_SUCCESS = 0
 _DN_STARTED = 0x00000008
+
+
+class WindowsHid8BitDoBatteryProvider:
+    """Read the exact hardware battery percentage of 8BitDo controllers over native HID.
+
+    On modern firmware (or when connected via 2.4 GHz USB receiver in DirectInput/native mode),
+    the controller communicates natively over HID using Report ID 0x01 (34 bytes).
+    Byte 14 contains:
+      - bits 0-6: Battery percentage (0-100)
+      - bit 7: Charging status (1 = charging, 0 = discharging)
+    Byte 15 contains controller connection status (0x01 = active).
+
+    Non-blocking overlapped I/O with shared read/write access is used so this query
+    coexists seamlessly with running games, Steam, and Windows input APIs without blocking.
+    """
+
+    def __init__(self) -> None:
+        if platform.system() != "Windows":
+            raise RuntimeError("This application supports Windows only.")
+        try:
+            self._cfgmgr32 = ctypes.WinDLL("cfgmgr32")
+            self._kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            self._hid = ctypes.WinDLL("hid")
+        except OSError as exc:
+            raise RuntimeError("Unable to load Windows HID libraries on this system.") from exc
+
+    def read(self) -> BatterySnapshot:
+        """Scan active HID devices for an 8BitDo controller and read battery telemetry."""
+        buf_len = c_ulong(0)
+        res = self._cfgmgr32.CM_Get_Device_Interface_List_SizeW(
+            byref(buf_len), byref(_GUID_DEVINTERFACE_HID), None, 0
+        )
+        if res != _CR_SUCCESS or buf_len.value == 0:
+            return BatterySnapshot(
+                connected=False,
+                percentage=None,
+                detail="Unable to query HID device interface list size.",
+            )
+
+        buf = create_unicode_buffer(buf_len.value)
+        res = self._cfgmgr32.CM_Get_Device_Interface_ListW(
+            byref(_GUID_DEVINTERFACE_HID), None, buf, buf_len.value, 0
+        )
+        if res != _CR_SUCCESS:
+            return BatterySnapshot(
+                connected=False,
+                percentage=None,
+                detail="Unable to retrieve HID device interface list.",
+            )
+
+        target_paths: list[str] = []
+        for path in buf[:].split("\0"):
+            if not path:
+                continue
+            p_lower = path.lower()
+            if f"vid_{TARGET_VID:04x}" in p_lower:
+                target_paths.append(path)
+
+        if not target_paths:
+            return BatterySnapshot(
+                connected=False,
+                percentage=None,
+                detail="8BitDo controller not detected via HID.",
+            )
+
+        for path in target_paths:
+            snapshot = self._read_device(path)
+            if snapshot is not None and snapshot.connected:
+                return snapshot
+
+        return BatterySnapshot(
+            connected=False,
+            percentage=None,
+            detail="8BitDo HID device found, but controller is not transmitting telemetry.",
+        )
+
+    def _read_device(self, path: str) -> BatterySnapshot | None:
+        handle = self._kernel32.CreateFileW(
+            path,
+            _GENERIC_READ,
+            _FILE_SHARE_READ | _FILE_SHARE_WRITE,
+            None,
+            _OPEN_EXISTING,
+            _FILE_FLAG_OVERLAPPED,
+            None,
+        )
+        if handle == -1 or handle == 0:
+            return None
+
+        try:
+            attr = _HIDD_ATTRIBUTES()
+            attr.Size = ctypes.sizeof(_HIDD_ATTRIBUTES)
+            vid = TARGET_VID
+            pid: int | None = None
+            if self._hid.HidD_GetAttributes(handle, byref(attr)):
+                vid = int(attr.VendorID)
+                pid = int(attr.ProductID)
+
+            prod_buf = create_unicode_buffer(256)
+            device_name = "8BitDo Ultimate 2 Wireless Controller for PC"
+            if self._hid.HidD_GetProductString(handle, prod_buf, ctypes.sizeof(prod_buf)):
+                if prod_buf.value:
+                    device_name = prod_buf.value
+
+            ov = _OVERLAPPED()
+            ov.hEvent = self._kernel32.CreateEventW(None, True, False, None)
+            if not ov.hEvent:
+                return None
+
+            try:
+                read_buf = (ctypes.c_ubyte * 64)()
+                bytes_read = wintypes.DWORD(0)
+                res = self._kernel32.ReadFile(
+                    handle, read_buf, 64, byref(bytes_read), byref(ov)
+                )
+
+                completed = False
+                if res:
+                    completed = True
+                else:
+                    err = ctypes.get_last_error()
+                    if err == _ERROR_IO_PENDING:
+                        wait_res = self._kernel32.WaitForSingleObject(ov.hEvent, 200)
+                        if wait_res == _WAIT_OBJECT_0:
+                            if self._kernel32.GetOverlappedResult(
+                                handle, byref(ov), byref(bytes_read), False
+                            ):
+                                completed = True
+                        else:
+                            self._kernel32.CancelIo(handle)
+
+                if completed and bytes_read.value >= 15:
+                    data = bytes(read_buf[:bytes_read.value])
+                    raw_batt = data[14]
+                    pct = raw_batt & 0x7F
+                    is_charging = bool(raw_batt & 0x80)
+
+                    if 0 <= pct <= 100:
+                        # If byte 15 is explicitly 0 and pct is 0, dongle is idle/disconnected
+                        if len(data) > 15 and data[15] == 0 and pct == 0:
+                            return None
+
+                        return BatterySnapshot(
+                            connected=True,
+                            percentage=pct,
+                            charging=is_charging,
+                            device_name=device_name,
+                            vendor_id=vid,
+                            product_id=pid,
+                            connection_type="2.4GHz Wireless",
+                            detail="Battery level supplied by 8BitDo HID telemetry (2.4 GHz receiver).",
+                        )
+            finally:
+                self._kernel32.CloseHandle(ov.hEvent)
+        finally:
+            self._kernel32.CloseHandle(handle)
+
+        return None
 
 
 class WindowsBluetoothBatteryProvider:
@@ -311,34 +505,51 @@ class WindowsGamingInputBatteryProvider:
 
 
 class Composite8BitDoBatteryProvider:
-    """Composite provider prioritizing Bluetooth LE with 2.4 GHz fallback."""
+    """Composite provider prioritizing native HID telemetry and Bluetooth LE, with WGI fallback."""
 
     def __init__(self) -> None:
+        self._hid_provider = WindowsHid8BitDoBatteryProvider()
         self._bt_provider = WindowsBluetoothBatteryProvider()
         self._wgi_provider = WindowsGamingInputBatteryProvider()
 
     def read(self) -> BatterySnapshot:
-        # 1. Try Bluetooth LE first (provides accurate hardware gauge e.g. 88%)
+        # 1. Try native 8BitDo HID telemetry first (2.4 GHz receiver in DInput/native mode, USB)
+        try:
+            hid_snapshot = self._hid_provider.read()
+            if hid_snapshot.connected and hid_snapshot.percentage is not None:
+                return hid_snapshot
+        except Exception as exc:  # noqa: BLE001
+            LOGGER.debug("HID provider query failed: %s", exc)
+
+        # 2. Try Bluetooth LE (hardware gauge over GATT 0x180F)
         try:
             bt_snapshot = self._bt_provider.read()
-            if bt_snapshot.connected:
+            if bt_snapshot.connected and bt_snapshot.percentage is not None:
                 return bt_snapshot
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("Bluetooth provider query failed: %s", exc)
 
-        # 2. Try 2.4 GHz receiver via Windows Gaming Input
+        # 3. Fall back to Windows Gaming Input (for XInput mode receivers)
         try:
             wgi_snapshot = self._wgi_provider.read()
-            if wgi_snapshot.connected:
+            if wgi_snapshot.connected and wgi_snapshot.percentage is not None:
                 return wgi_snapshot
         except Exception as exc:  # noqa: BLE001
             LOGGER.debug("Windows Gaming Input query failed: %s", exc)
 
-        # 3. Not detected in either mode
+        # 4. If any provider detected the controller even without numeric capacity
+        if "hid_snapshot" in locals() and hid_snapshot.connected:
+            return hid_snapshot
+        if "bt_snapshot" in locals() and bt_snapshot.connected:
+            return bt_snapshot
+        if "wgi_snapshot" in locals() and wgi_snapshot.connected:
+            return wgi_snapshot
+
+        # 5. Not detected in any mode
         return BatterySnapshot(
             connected=False,
             percentage=None,
-            detail="8BitDo controller not detected via Bluetooth or 2.4 GHz wireless.",
+            detail="8BitDo controller not detected via HID, Bluetooth, or 2.4 GHz wireless.",
         )
 
 
