@@ -11,6 +11,16 @@ Featuring a **Windows-style transparent battery tray icon** that displays a **sm
   <img width="416" height="130" alt="image" src="https://github.com/user-attachments/assets/a83e5faf-22f1-4d4a-9a45-634be7995449" />
 </div>
 
+> [!TIP]
+> ### 🎮 Real-Time Battery Life on 2.4 GHz (Latest 8BitDo Firmware)
+> On the latest firmware for the **8BitDo Ultimate 2 Wireless**, you can enable native hardware telemetry over the 2.4 GHz wireless receiver:
+> 
+> 1. Power off the controller (or place it on the dock).
+> 2. **Hold down the <kbd>B</kbd> button and turn on the controller** (or pick it up from the dock while holding <kbd>B</kbd>).
+> 3. Windows will detect it natively as **"8BitDo Ultimate 2 Wireless Controller for PC"** instead of generic XInput.
+> 
+> In this mode, the controller communicates over native HID telemetry, allowing this application to display your **real-time 1% battery percentage** (e.g. `82% (~15h left)`) directly over the 2.4 GHz dongle with zero Bluetooth required!
+
 ---
 
 ## Features
@@ -23,12 +33,12 @@ Featuring a **Windows-style transparent battery tray icon** that displays a **sm
   - ⚡ **Electric Cyan with Lightning Bolt**: Controller is actively charging (docked or USB-C).
   - ⚪ **Muted Neutral Cross**: Controller is disconnected or in sleep mode.
 - **Accurate Triple Connection Architecture**:
-  - **Native 8BitDo HID Telemetry (2.4 GHz Receiver & USB)**: Direct, non-blocking asynchronous reading of the controller's native telemetry stream (`VID_2DC8&PID_6012` / `0x6013`). On modern firmware, reads the exact 1% hardware battery gauge (e.g. `83%`) directly over the 2.4 GHz dongle with zero Bluetooth required!
+  - **Native 8BitDo HID Telemetry (2.4 GHz Receiver & USB)**: Direct, non-blocking asynchronous reading of the controller's native telemetry stream (`VID_2DC8&PID_6012` / `0x6013`). On modern firmware, reads the exact 1% hardware battery gauge (e.g. `82%`) directly over the 2.4 GHz dongle with zero Bluetooth required!
   - **Bluetooth LE Mode**: Reads the exact hardware battery gauge byte directly from Windows' Bluetooth LE GATT Battery Service via native `cfgmgr32`.
   - **Windows Gaming Input Fallback**: Automatically falls back to Windows Gaming Input for generic XInput receiver mode (`USB\VID_2DC8&PID_310B`).
 - **Informative Tooltips & Context Menu**:
-  - Hovering over the tray icon displays exact percentage, remaining battery time estimate, connection type, and charging state (e.g., `8BitDo Ultimate 2 — 83% (~15h left) [2.4GHz Wireless]`).
-  - Right-click menu displays real-time connection status (`● 8BitDo: 83% (~15h left) via 2.4GHz Wireless`), instant manual refresh, diagnostic log viewer, and clean exit.
+  - Hovering over the tray icon displays exact percentage, remaining battery time estimate, connection type, and charging state (e.g., `8BitDo Ultimate 2 — 82% (~15h left) [2.4GHz Wireless]`).
+  - Right-click menu displays real-time connection status (`● 8BitDo: 82% (~15h left) via 2.4GHz Wireless`), instant manual refresh, diagnostic log viewer, and clean exit.
 - **100% Read-Only & Safe**:
   - **Zero HID writes**: No arbitrary feature reports or rumble packets injected into your game stream.
   - Zero dropped inputs, zero input lag, zero controller desync.
@@ -51,26 +61,26 @@ Featuring a **Windows-style transparent battery tray icon** that displays a **sm
 │                 │                                                      │
 │                 ▼ (Polled every 10s via worker thread)                 │
 │  ┌─────────────────────────────┐                                       │
-│  │   CompositeBatteryProvider  │                                       │
+│  │  CompositeBatteryProvider   │                                       │
 │  └──────────────┬──────────────┘                                       │
 │                 │                                                      │
-│        ┌────────┴────────────────────────────────────────┐             │
-│        ▼                                                 ▼             │
-│  ┌───────────────────────────┐             ┌─────────────────────────┐ │
-│  │ WindowsBluetoothProvider  │             │ WindowsGamingInput (WGI)│ │
-│  │ - SetupAPI / cfgmgr32     │             │ - RawGameController     │ │
-│  │ - PKEY_BatteryPercentage  │             │ - 2.4 GHz USB Receiver  │ │
-│  │ - Accurate hardware gauge │             │ - XInput / DInput tiers │ │
-│  │   (e.g., exact 88%)       │             │   (Full/Med/Low/Empty)  │ │
-│  └───────────────────────────┘             └─────────────────────────┘ │
+│        ┌────────┴──────────────────────────┬────────────────────────┐  │
+│        ▼                                   ▼                        ▼  │
+│  ┌───────────────────────────┐ ┌──────────────────────────┐ ┌────────┴───────┐
+│  │ WindowsHid8BitDoProvider  │ │ WindowsBluetoothProvider │ │ WindowsGaming  │
+│  │ - 2.4 GHz USB / Native    │ │ - SetupAPI / cfgmgr32    │ │   Input (WGI)  │
+│  │ - Report ID 0x01 Byte 14  │ │ - PKEY_BatteryPercentage │ │ - RawGameCtrl  │
+│  │ - Real-time 1% Hardware % │ │ - BLE GATT Battery Svc   │ │ - Legacy       │
+│  │   (Hold B on power on)    │ │   (e.g., exact 88%)      │ │   XInput mode  │
+│  └───────────────────────────┘ └──────────────────────────┘ └────────────────┘
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Why the Color Checker? (Bluetooth vs. 2.4 GHz)
+### Connection Modes & Telemetry
 
-- **Bluetooth LE**: Windows natively queries the standard Bluetooth Battery Service (GATT `0x180F`) and stores the exact battery byte in the device property cache (`PKEY_Device_BatteryPercentage`). When connected via Bluetooth, the app reads this exact percentage (e.g. `88%`).
-- **2.4 GHz USB Receiver**: When connected to the 2.4 GHz wireless adapter, the receiver presents to Windows as a standard Microsoft XInput controller (`Xbox 360 Controller for Windows`). Microsoft's XInput protocol only transmits 4 coarse 2-bit battery states (`Full`, `Medium`, `Low`, `Critical`). Windows translates `Full` to synthetic $100\%$ capacity.
-- **Our Approach**: Rather than displaying misleading coarse numbers in 2.4 GHz mode, the system tray icon uses an intuitive **color-coded 4-segment battery checker**. The exact percentage is always visible when you hover over the tray icon or right-click the menu.
+- **Native 2.4 GHz Mode (Hold <kbd>B</kbd> on Power On)**: When booted in native mode on the latest firmware, the controller exposes a native 34-byte HID report. Byte 14 delivers real-time 1% battery telemetry and charging state directly over the 2.4 GHz dongle with zero Bluetooth required.
+- **Bluetooth LE**: Windows natively queries the standard Bluetooth Battery Service (GATT `0x180F`) and stores the exact battery byte in the device property cache (`PKEY_Device_BatteryPercentage`). When connected via Bluetooth, the app reads this exact percentage.
+- **Generic XInput Mode**: When connected in standard XInput mode (`Xbox 360 Controller for Windows`), Microsoft's XInput protocol only transmits coarse 2-bit battery tiers. Windows Gaming Input translates this, and the tray renders the corresponding clean capacity bar.
 
 ---
 
