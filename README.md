@@ -7,8 +7,9 @@ A lightweight, secure, and read-only Windows system tray monitor for the **8BitD
 
 Featuring a **Windows-style transparent battery tray icon** that displays a **smooth continuous capacity bar** (matching native Windows battery behavior) with remaining battery life estimates (e.g. `~15h left`), color-coded by level, with zero gameplay interference.
 
+
 <div align="center">
-  <img width="416" height="130" alt="image" src="https://github.com/user-attachments/assets/a83e5faf-22f1-4d4a-9a45-634be7995449" />
+  <img width="406" height="142" alt="image" src="https://github.com/user-attachments/assets/36b4fa29-acec-4823-bba2-3827efe24810" />
 </div>
 
 > [!TIP]
