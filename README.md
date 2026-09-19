@@ -1,6 +1,11 @@
 # 8BitDo Ultimate 2 Battery Tray 
 <div align="center">
   <img width="96" height="96" alt="logo" src="https://github.com/user-attachments/assets/a2be8bf9-b3d7-49c2-a6d1-74c9786f326a" />
+  <br />
+  <a href="https://github.com/sponsors/Swif7ify"><img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?style=flat-square&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub" /></a>
+  <a href="https://github.com/Swif7ify/8BitDo-Battery-Tray-Display/releases"><img src="https://img.shields.io/github/v/release/Swif7ify/8BitDo-Battery-Tray-Display?style=flat-square&color=2ea44f" alt="Latest Release" /></a>
+  <img src="https://img.shields.io/badge/Platform-Windows%2010%20%2F%2011-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Platform: Windows" />
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License: MIT" />
 </div>
 
 A lightweight, secure, and read-only Windows system tray monitor for the **8BitDo Ultimate 2 Wireless** controller (2.4 GHz USB wireless receiver, Bluetooth LE, and USB-C modes).
@@ -242,3 +247,14 @@ Application logs are stored locally in:
 ```
 - Maximum file size: 256 KB (rotated once to keep disk usage under 512 KB total).
 - No sensitive user data or game telemetry is ever logged.
+
+---
+
+## 💖 Support the Project
+
+If this application saves your gameplay sessions or makes your controller setup better, consider supporting development via **GitHub Sponsors**!
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor%20on-GitHub%20Sponsors-ea4aaa?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Swif7ify)
+
+Every bit of support helps keep open-source controller tools maintained and updated for future Windows and firmware releases.
+
