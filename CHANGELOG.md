@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-09-19
+
+### Added
+- **Native 8BitDo HID Telemetry Provider (`WindowsHid8BitDoBatteryProvider`)**:
+  - Direct non-blocking asynchronous overlapped reading of Report ID `0x01` byte 14 over the 2.4 GHz USB wireless receiver (`VID_2DC8&PID_6012` / `0x6013`).
+  - Delivers exact real-time 1% hardware battery percentages even when detected natively as "8BitDo Ultimate 2 Wireless Controller for PC" instead of generic XInput.
+- **Hold <kbd>B</kbd> on Power On Support**:
+  - Documented shortcut for the latest 8BitDo firmware: hold down <kbd>B</kbd> when powering on the controller to enable native mode and real-time battery reporting over the 2.4 GHz USB adapter with zero Bluetooth required.
+
+### Fixed
+- **Stale Bluetooth Disconnection Bug**:
+  - Fixed an issue where switching the controller from Bluetooth to 2.4 GHz mode caused the app to retain stale cached battery percentages (e.g. frozen at 66%) from Windows' Bluetooth property cache.
+  - Added `DEVPKEY_Device_IsConnected` validation so disconnected or sleeping Bluetooth devices immediately release, allowing 2.4 GHz mode to report without delay.
+- **Removed Question Mark Glyph**:
+  - Removed `?` fallback inside the tray battery icon, ensuring connected controllers always display a clean, smooth continuous capacity bar.
+
+### Changed
+- Re-architected composite provider hierarchy: Priority 1 (Native 8BitDo HID) -> Priority 2 (Bluetooth LE) -> Priority 3 (Windows Gaming Input).
+
+---
+
 ## [1.0.0] - 2026-09-17
 
 ### Initial Release

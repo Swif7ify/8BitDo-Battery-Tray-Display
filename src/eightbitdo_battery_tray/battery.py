@@ -81,6 +81,11 @@ _PKEY_BATT = _DEVPROPKEY(
     _GUID(0x104EA319, 0x6EE2, 0x4701, (c_byte * 8)(0xBD, 0x47, 0x8D, 0xDB, 0xF4, 0x25, 0xBB, 0xE5)),
     2,
 )
+# DEVPKEY_Device_IsConnected: {83DA6326-97A6-4088-9453-A1923F573B29}, 15
+_PKEY_IS_CONNECTED = _DEVPROPKEY(
+    _GUID(0x83DA6326, 0x97A6, 0x4088, (c_byte * 8)(0x94, 0x53, 0xA1, 0x92, 0x3F, 0x57, 0x3B, 0x29)),
+    15,
+)
 
 _CR_SUCCESS = 0
 _DN_STARTED = 0x00000008
@@ -302,13 +307,22 @@ class WindowsBluetoothBatteryProvider:
             if "8bitdo" not in device_name.lower():
                 continue
 
-            # Check if device is actively started/connected
+            # Check if device is actively started
             status = wintypes.DWORD()
             problem = wintypes.DWORD()
             r = self._cfgmgr32.CM_Get_DevNode_Status(byref(status), byref(problem), devinst, 0)
             is_started = (r == _CR_SUCCESS) and bool(status.value & _DN_STARTED)
 
             if not is_started:
+                continue
+
+            # Verify the Bluetooth device is actively connected (not just paired / sleeping)
+            is_conn = c_byte()
+            is_conn_size = c_ulong(ctypes.sizeof(is_conn))
+            r_conn = self._cfgmgr32.CM_Get_DevNode_PropertyW(
+                devinst, byref(_PKEY_IS_CONNECTED), byref(prop_type), byref(is_conn), byref(is_conn_size), 0
+            )
+            if r_conn == _CR_SUCCESS and is_conn.value == 0:
                 continue
 
             # Query battery percentage
